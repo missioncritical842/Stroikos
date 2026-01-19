@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Grist Invoice</title>
+
+    <style>
+      body {
+        font-family: Sans-Serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 5px;
+      }
+
+      .logo {
+        max-width: 100px;
+      }
+
+      .letterhead {
+        display: flex;
+        align-items: center;
+        margin-bottom: 2em;
+        justify-content: space-between;
+      }
+
+      .letterhead .logo {
+        margin-right: 1em;
+        font-size: 12pt;
+        margin-top: 0.5em;
+      }
+
+      .letterhead-text {
+        flex-grow: 1;
+        text-align: center;
+      }
+
+      .company-name {
+        font-family: sans-serif;
+        font-weight: bold;
+        font-size: 18pt;
+        letter-spacing: 0.05em;
+      }
+
+      .company-details {
+        font-family: sans-serif;
+        font-weight: 300;
+        font-size: 12pt;
+        margin-top: 0.5em;
+      }
+
+      .invoice-meta {
+        /* margin-top: 2em; */ /* Removed to fix alignment */
+      }
+
+      .address-title {
+        font-weight: bold;
+        font-size: 1.1em;
+        margin-bottom: 0;
+        text-transform: uppercase;
+      }
+
+      .meta {
+        color: #666;
+      }
+
+      .header .title {
+        font-size: 300%;
+        font-weight: bold;
+      }
+
+      .header .meta {
+        text-transform: uppercase;
+      }
+
+      .info .meta {
+        text-transform: uppercase;
+      }
+
+      .info .meta::after {
+        content: " :";
+      }
+
+      .supplier {
+        color: #333;
+        display: block;
+      }
+
+      .block {
+        padding-left: 5px;
+        display: block;
+      }
+
+      .client, .items {
+        padding: 1px;
+        margin-top: 1em;
+        margin-bottom: 1em;
+        background: #ccc;
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+
+      .client .title {
+        margin-left: 4px;
+        color: white;
+        text-transform: uppercase;
+      }
+
+      .client .details {
+        padding: 4px;
+        background-color: var(--grist-theme-page-panels-main-panel-bg, white);
+      }
+
+      table.items {
+        width: 100%;
+        border: 1px solid #ccc;
+        border-collapse: collapse;
+        table-layout: fixed; /* enforce column width percentages */
+      }
+
+      table.items th {
+        text-align: center;
+        color: black;
+        text-transform: uppercase;
+        font-weight: normal;
+        padding: 4px;
+      }
+      table.items th.money { text-align: center; }
+
+      table.items td {
+        background-color: var(--grist-theme-page-panels-main-panel-bg, white);
+        padding: 4px;
+        border: 1px solid #eee;
+      }
+
+      /* Column widths for items table */
+      table.items th.desc-col, table.items td.desc-col { width: 40%; }
+      table.items th.type-color-col, table.items td.type-color-col { width: 40%; }
+      table.items th.money, table.items td.money { width: 10%; }
+
+      .client .title, table.items th, .help .title {
+        padding-top: 10px;
+        padding-bottom: 10px;
+      }
+
+      .money, .number {
+        text-align: right;
+        width: 15%;
+        color: #333;
+      }
+
+      .name {
+        color: #333;
+      }
+
+      .address {
+        padding-bottom: 1em;
+      }
+
+      div.date-tag {
+        display: inline-block;
+        min-width: 80px;
+      }
+
+      div.top {
+        display: flex;
+        width: 100%;
+        padding: 0px;
+        justify-content: space-between;
+      }
+
+      div.instructions, .newlined {
+        white-space: pre-line;
+      }
+      p.note {
+        white-space: normal;
+      }
+
+      div.paid {
+        position: relative;
+        left: 40%;
+        color: red;
+        rotate: 15deg;
+        font-size: 80px;
+        top: 20px;
+        border: 5px solid red;
+        float: left;
+        font-weight: bolder;
+      }
+
+      .app {
+        position: relative;
+      }
+
+      @media print {
+        div.print {
+          display: none;
+        }
+      }
+
+      div.print {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+      }
+
+      div.print a {
+        background: #C83200;
+        display: block;
+        font-size: 200%;
+        color: white;
+        text-decoration: none;
+        padding: 0.25em;
+        padding-top: 0.5em;
+        padding-right: 0.5em;
+        border-top-right-radius: 0.5em;
+        text-transform: uppercase;
+      }
+
+      div.print a:hover {
+        background: #666;
+      }
+
+      .done {
+        text-decoration: line-through;
+      }
+
+      div.column-name {
+        display: inline-block;
+      }
+
+      .column-name {
+        background: #666;
+        color: white;
+        margin: 2px;
+        padding: 2px;
+        border-radius: 2px;
+        font-style: normal;
+      }
+
+      .column-recognized {
+        background: green;
+      }
+
+      .column-expected {
+        background: #666;
+      }
+
+      .column-ignored {
+        background: red;
+      }
+
+      .help {
+        padding: 1px;
+        margin-top: 1em;
+        margin-bottom: 1em;
+        background: black;
+        color: white;
+      }
+
+      .help .details {
+        padding: 4px;
+      }
+
+      .help table {
+        border: none;
+      }
+
+      .help td.key {
+        text-align: right;
+      }
+
+      .help table {
+        padding-bottom: 3px;
+      }
+
+      .help-close {
+        display: float;
+        float: right;
+        max-width: 150px;
+        padding: 5px;
+        border-left: 1px solid white;
+        border-bottom-left-radius: 5px;
+        font-size: 80%;
+        font-style: italic;
+      }
+
+      .help pre {
+        display: inline-block;
+        background: #ddd;
+        color: #000;
+        padding: 0.25em;
+        margin-left: 1em;
+      }
+
+      .help .title {
+        margin-left: 4px;
+        text-transform: uppercase;
+      }
+
+      .status {
+        padding: 4px;
+      }
+
+      .status .button {
+        display: inline-block;
+        text-decoration: none;
+        color: #333;
+        background: #ddd;
+        padding-left: 0.5em;
+        padding-right: 0.5em;
+        padding-top: 1px;
+        padding-bottom: 1px;
+        margin-top: 1px;
+        margin-bottom: 1px;
+        border-radius: 0.25em;
+      }
+
+      table.items .total-row td {
+        font-weight: bold;
+        border-top: 2px solid #333;
+      }
+
+      .total-label {
+        text-align: right;
+        padding-right: 1em;
+      }
+
+      .currency-cell {
+        display: inline-flex;
+        justify-content: flex-end;
+        gap: 4px;
+        width: 100%;
+      }
+
+      .money span {
+        display: inline-flex;
+        justify-content: flex-end;
+        gap: 4px;
+        width: 100%;
+      }
+
+      .currency-symbol {
+        margin-left: 0;
+      }
+
+      .stump-man-header {
+        font-family: sans-serif;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 24pt;
+      }
+
+      .stump-man-container {
+        position: relative;
+        text-align: center;
+        margin-bottom: 2em;
+        height: 90px;
+      }
+
+      .stump-man-logo {
+        max-height: 90px;
+        position: absolute;
+        right: 0;
+        top: 0;
+      }
+
+      .footer-container {
+        margin-top: 4em;
+        position: relative;
+        height: 60px;
+      }
+
+      .footer-email {
+        text-align: center;
+      }
+
+      .footer-logo {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        max-height: 50px;
+        max-width: 150px;
+      }
+    </style>
+
+    <!-- A template for showing an invoice in a Custom Widget in Grist. -->
+    <!-- Uses Vue.js, moment, and the Grist Plugin API -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.3/vue.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/moment.min.js"></script>
+    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script src="invoice.js?ver=11"></script>
+    <script src="exampleData.js"></script>
+
+    <link rel="stylesheet" href="invoice.css">
+  </head>
+  <body>
+    <div id="app">
+      <div class="status" v-if="status">
+        <template v-if="status === 'waiting'">
+          <p>Waiting for data...</p>
+          <ul>
+            <li v-bind:class="[tableConnected ? 'done' : '']">I need <b>read table</b> access.</li>
+            <li v-bind:class="[haveRows ? 'done' : '']">I need at least one row of data.</li>
+            <li v-bind:class="[rowConnected ? 'done' : '']">I need <b>Select By</b> set.</li>
+          </ul>
+          <p>Examples:</p>
+          <ul>
+            <li><a class="button" href="index.html?demo=1">A filled out invoice</a></li>
+            <li><a class="button" href="index.html?labels=1">A labelled invoice</a></li>
+          </ul>
+        </template>
+        <template v-else>
+          {{ status }}
+        </template>
+      </div>
+      <template v-if="invoice">
+        <template v-if="invoice.Invoicer && invoice.Invoicer.Name === 'Stroikos Services'">
+          <div class="letterhead">
+            <img class="logo" src="https://stroikos.com/wp-content/uploads/2024/10/Stroikos-services-logo.png" alt="Stroikos Logo">
+            <div class="letterhead-text">
+              <div class="company-name">Stroikos Services — Tree Care</div>
+              <div class="company-details">Arbores amamus</div>
+            </div>
+          </div>
+        </template>
+        <template v-else-if="invoice.Invoicer && invoice.Invoicer.Name === 'Stroikos Lights'">
+          <div class="letterhead">
+            <img class="logo" src="https://stroikos.com/wp-content/uploads/2024/10/ChristmasImage.jpg" alt="Stroikos Lights Logo">
+            <div class="letterhead-text">
+              <div class="company-name">Christmas Lights by Stroikos</div>
+              <div class="company-details">announcing peace and goodwill</div>
+            </div>
+          </div>
+        </template>
+        <template v-else-if="invoice.Invoicer && invoice.Invoicer.Name === 'A Stump Man'">
+          <div class="stump-man-container">
+            <div class="stump-man-header">A STUMP MAN</div>
+            <img class="stump-man-logo" src="https://stroikos.com/wp-content/uploads/2025/06/A-Stump-Man-Logo.jpg" alt="A Stump Man Logo">
+          </div>
+        </template>
+        <div class="top">
+          <div class="supplier">
+            <div class="address-title">Client</div>
+            <div v-for="business in (invoice.Client ? [invoice.Client] : [])">
+              <template v-if="typeof(business) === 'string'">
+                <div class="address newlined">{{ business }}</div>
+              </template>
+              <template v-else>
+                <div class="address">
+                  <span class="name">{{ business.First }} {{ business.Last }}</span><br />
+                  {{ business.Street1 }}<br />
+                  <template v-if="business.Street2">
+                    {{ business.Street2 }}<br />
+                  </template>
+                  {{ business.City }} {{ business.State }} {{ business.Zip }}<br />
+                  <template v-if="business.Country">
+                    {{ business.Country }}<br />
+                  </template>
+                </div>
+              </template>
+              <div class="invoice-meta">
+                <div v-if="invoice.Invoice ? invoice.Issued : invoice.Quote_Date"><strong>Date:</strong> {{ (invoice.Invoice ? invoice.Issued : invoice.Quote_Date) | asDate }}</div>
+                <div v-if="invoice.Number"><strong>{{ invoice.Invoice ? 'Invoice' : 'Quote' }} #:</strong> {{ invoice.Number }}</div>
+              </div>
+            </div>
+          </div>
+
+          <template v-if="invoice.Invoicer && invoice.Invoicer.Name === 'Stroikos Services'">
+            <div class="supplier">
+              <div class="address-title">From</div>
+              <div v-for="business in (invoice.Invoicer ? [invoice.Invoicer] : [])">
+                <template v-if="typeof(business) === 'string'">
+                  <div class="address newlined">{{ business }}</div>
+                </template>
+                <template v-else>
+                  <div class="address">
+                    <span class="name">{{ business.Name }}</span><br />
+                    {{ business.Street1 }}<br />
+                    <template v-if="business.Street2">
+                      {{ business.Street2 }}<br />
+                    </template>
+                    {{ business.City }} {{ business.State }} {{ business.Zip }}<br />
+                    <template v-if="business.Country">
+                      {{ business.Country }}<br />
+                    </template>
+                  </div>
+                </template>
+                <div class="invoice-meta">
+                  <div v-if="invoice.Invoice && invoice.Due">
+                    <strong>Due Date:</strong> {{ invoice.Due | asDate }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+            <template v-else-if="invoice.Invoicer && invoice.Invoicer.Name === 'Stroikos Lights'">
+              <div class="supplier">
+                <div class="address-title">From</div>
+                <div class="address">
+                  <span class="name">Stroikos Services</span><br />
+                  2760 S Ogden St<br />
+                  Englewood CO 80113<br />
+                </div>
+                <div class="invoice-meta">
+                  <div v-if="invoice.Invoice && invoice.Due">
+                    <strong>Due Date:</strong> {{ invoice.Due | asDate }}
+                  </div>
+                </div>
+              </div>
+            </template>
+        </div>
+
+        <div style="margin: 2em 0;">
+          <p v-if="invoice.Client">
+            Dear {{ typeof invoice.Client === 'object' ? invoice.Client.First : invoice.Client }},
+          </p>
+          <p v-if="invoice.Invoice ? invoice.InvoiceNote : invoice.QuoteNote" class="note" style="margin-top: 1em;" v-html="renderMarkdown(invoice.Invoice ? invoice.InvoiceNote : invoice.QuoteNote)"></p>
+        </div>
+
+        <table class="items">
+          <template v-if="!Array.isArray(invoice.LightsItems)">
+            <tr>
+              <th class="desc-col">Christmas Light Description</th>
+              <th class="type-color-col">Type and Color</th>
+              <th class="money">Price</th>
+              <th v-if="invoice.ShowOctoberPrice" class="money">October Price (20% off)</th>
+            </tr>
+            <tr>
+              <td class="desc-col"><span v-html="renderMarkdown(invoice.LightsItems)"></span></td>
+              <td class="type-color-col"></td>
+              <td class="money">{{ invoice.LightsTotal | currency }}</td>
+              <td v-if="invoice.ShowOctoberPrice" class="money">{{ (Number(invoice.LightsTotal) * 0.8) | currency }}</td>
+            </tr>
+          </template>
+          <template v-else>
+            <tr>
+              <th class="desc-col">Christmas Light Description</th>
+              <th class="type-color-col">Type and Color</th>
+              <th class="money">Price</th>
+              <th v-if="invoice.ShowOctoberPrice" class="money">October Price (20% off)</th>
+            </tr>
+            <tr v-for="(item, index) in invoice.LightsItems">
+              <td class="desc-col"><span v-html="renderMarkdown(item.Description || [item.Task_Description_Start, [item.Tree_Kind, item.Task_Descriptions].filter(Boolean).join('')].filter(Boolean).join(' '))"></span></td>
+              <td class="type-color-col"><span v-html="renderMarkdown(item.EditLightType)"></span></td>
+              <td class="money">
+                <span>
+                  <span :class="{ 'currency-symbol': index === 0 }">{{ index === 0 ? '$' : '' }}</span>
+                  <span>{{ Math.round(Number(item.Total)).toLocaleString('en-US') }}</span>
+                </span>
+              </td>
+              <td v-if="invoice.ShowOctoberPrice" class="money">
+                <span>
+                  <span :class="{ 'currency-symbol': index === 0 }">{{ index === 0 ? '$' : '' }}</span>
+                  <span>{{ Math.round(Number(item.Total) * 0.8).toLocaleString('en-US') }}</span>
+                </span>
+              </td>
+            </tr>
+            <tr class="total-row">
+              <td class="total-label" colspan="2">Total</td>
+              <td class="money">
+                <span>
+                  <span class="currency-symbol">$</span>
+                  <span>{{ Math.round(Number(invoice.LightsTotal)).toLocaleString('en-US') }}</span>
+                </span>
+              </td>
+              <td v-if="invoice.ShowOctoberPrice" class="money">
+                <span>
+                  <span class="currency-symbol">$</span>
+                  <span>{{ Math.round(Number(invoice.LightsTotal) * 0.8).toLocaleString('en-US') }}</span>
+                </span>
+              </td>
+            </tr>
+          </template>
+        </table>
+
+        <div style="margin-top: 2em;">
+          <p v-if="invoice.Invoice ? invoice.FinalInvoiceText : invoice.FinalQuoteText" class="note">
+            <span v-html="renderMarkdown(invoice.Invoice ? invoice.FinalInvoiceText : invoice.FinalQuoteText)"></span>
+            <!--<span v-if="invoice.Invoicer"> {{ typeof invoice.Invoicer === 'object' ? invoice.Invoicer.Name : invoice.Invoicer }}.</span>-->
+          </p>
+          <p v-else-if="invoice.Invoicer">Thank you for considering {{ typeof invoice.Invoicer === 'object' ? invoice.Invoicer.Name : invoice.Invoicer }}.</p>
+          <br/>
+          <p style="margin-top: 1em;">Gratefully,</p>
+          <br/><br/>
+          <p v-if="invoice.Invoicer && typeof invoice.Invoicer === 'object'" style="margin-top: 1em; margin-bottom: 0;">
+            {{ invoice.Invoicer.First }} {{ invoice.Invoicer.Last }}
+          </p>
+          <div v-if="invoice.Invoicer && typeof invoice.Invoicer === 'object'">
+            <template v-if="invoice.Invoicer.Email">
+              <div class="email">{{ invoice.Invoicer.Email }}</div>
+            </template>
+            <template v-if="invoice.Invoicer.Phone">
+              <div class="phone">{{ invoice.Invoicer.Phone }}</div>
+            </template>
+            <template v-if="invoice.Invoicer.Website">
+              <div class="website"><a v-bind:href="invoice.Invoicer.Url">{{ invoice.Invoicer.Website }}</a></div>
+            </template>
+          </div>
+        </div>
+
+        <template v-for="help in (invoice.Help ? [invoice.Help] : [])">
+          <div class="help">
+            <div class="help-close">
+              Add <span class="column-name">Due</span>, <span class="column-name">Issued</span>, or <span class="column-name">Quote_Date</span> to hide this help.
+            </div>
+            <div class="title">Column information</div>
+            <div class="details">
+              <table>
+                <tr v-for="group in ['recognized', 'expected', 'ignored']">
+                  <td class="key">{{ group }}</td>
+                  <td>
+                    <template v-if="group in help">
+                      <div v-bind:class="['column-name', 'column-' + group]" v-for="col in help[group]">{{col}}</div>
+                    </template>
+                    <template v-else>
+                      &mdash;
+                    </template>
+                  </td>
+                </tr>
+              </table>
+              <template v-if="invoice.SuggestReferencesColumn">
+                <div>For structured address and item information, add a <span class="column-name">References</span> column with this formula:</div>
+                <div>
+                  <pre>RECORD(rec, expand_refs=1)</pre>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+        <template v-if="invoice.Paid">
+          <div class="paid">
+            PAID
+          </div>
+        </template>
+
+        <div class="print">
+          <a href="javascript:window.print()">Print</a>
+        </div>
+      </template>
+    </div>
+  </body>
+</html>
