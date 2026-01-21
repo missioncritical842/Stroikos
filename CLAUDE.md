@@ -3,7 +3,7 @@
 ## Repository Info
 - **GitHub**: https://github.com/missioncritical842/Stroikos
 - **GitHub Pages**: https://missioncritical842.github.io/Stroikos/
-- **Current Version**: v1.0
+- **Current Version**: v1.6
 
 ## Grist Documents Using These Widgets
 
@@ -13,7 +13,9 @@
 ## Widgets
 | Widget | GitHub Pages URL |
 |--------|------------------|
-| (none yet) | |
+| Client Form | https://missioncritical842.github.io/Stroikos/client-form.html |
+| Lights Invoice | https://missioncritical842.github.io/Stroikos/lights-invoice.html |
+| Tree Invoice | https://missioncritical842.github.io/Stroikos/tree-invoice.html |
 
 ## Commit Requirements
 - **Always increment version number** in commit message (e.g., "Description of changes (v1.1)")

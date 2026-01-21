@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Add New Client v1.0</title>
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: var(--grist-theme-page-panels-main-panel-bg, #f5f5f5);
+        color: var(--grist-theme-text, #333);
+      }
+
+      .form-header {
+        text-align: center;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #ccc;
+      }
+
+      .form-header h1 {
+        margin: 0 0 8px 0;
+        font-size: 24px;
+        color: #333;
+      }
+
+      .form-header p {
+        margin: 0;
+        color: #666;
+        font-size: 14px;
+      }
+
+      .form-section {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+
+      .form-section h2 {
+        margin: 0 0 16px 0;
+        font-size: 16px;
+        color: #555;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #eee;
+      }
+
+      .form-row {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .form-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .form-group {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .form-group.half {
+        flex: 0.5;
+      }
+
+      .form-group.third {
+        flex: 0.33;
+      }
+
+      .form-group label {
+        font-size: 13px;
+        font-weight: 500;
+        color: #555;
+        margin-bottom: 6px;
+      }
+
+      .form-group label .required {
+        color: #c00;
+        margin-left: 2px;
+      }
+
+      .form-group input[type="text"],
+      .form-group input[type="email"],
+      .form-group input[type="tel"],
+      .form-group select {
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        background: white;
+      }
+
+      .form-group input:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #4a90d9;
+        box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.15);
+      }
+
+      .form-group input.error {
+        border-color: #c00;
+      }
+
+      .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 0;
+      }
+
+      .checkbox-group input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+      }
+
+      .checkbox-group label {
+        margin-bottom: 0;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .form-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        margin-top: 24px;
+      }
+
+      .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s, transform 0.1s;
+      }
+
+      .btn:active {
+        transform: scale(0.98);
+      }
+
+      .btn-primary {
+        background-color: #4a90d9;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background-color: #3a7bc8;
+      }
+
+      .btn-primary:disabled {
+        background-color: #a0c4e8;
+        cursor: not-allowed;
+      }
+
+      .btn-secondary {
+        background-color: #e0e0e0;
+        color: #333;
+      }
+
+      .btn-secondary:hover {
+        background-color: #d0d0d0;
+      }
+
+      .status-message {
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 16px;
+        font-size: 14px;
+      }
+
+      .status-message.success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .status-message.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      .status-message.info {
+        background-color: #cce5ff;
+        color: #004085;
+        border: 1px solid #b8daff;
+      }
+
+      .status-waiting {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+      }
+
+      .status-waiting ul {
+        list-style: none;
+        padding: 0;
+        margin: 20px 0;
+      }
+
+      .status-waiting li {
+        padding: 8px 0;
+      }
+
+      .status-waiting .done {
+        color: #28a745;
+        text-decoration: line-through;
+      }
+
+      @media (max-width: 500px) {
+        .form-row {
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .form-group.half,
+        .form-group.third {
+          flex: 1;
+        }
+      }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.3/vue.min.js"></script>
+    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+
+    <script>
+    function ready(fn) {
+      if (document.readyState !== 'loading') {
+        fn();
+      } else {
+        document.addEventListener('DOMContentLoaded', fn);
+      }
+    }
+
+    const US_STATES = [
+      { abbr: '', name: 'Select State' },
+      { abbr: 'AL', name: 'Alabama' },
+      { abbr: 'AK', name: 'Alaska' },
+      { abbr: 'AZ', name: 'Arizona' },
+      { abbr: 'AR', name: 'Arkansas' },
+      { abbr: 'CA', name: 'California' },
+      { abbr: 'CO', name: 'Colorado' },
+      { abbr: 'CT', name: 'Connecticut' },
+      { abbr: 'DE', name: 'Delaware' },
+      { abbr: 'FL', name: 'Florida' },
+      { abbr: 'GA', name: 'Georgia' },
+      { abbr: 'HI', name: 'Hawaii' },
+      { abbr: 'ID', name: 'Idaho' },
+      { abbr: 'IL', name: 'Illinois' },
+      { abbr: 'IN', name: 'Indiana' },
+      { abbr: 'IA', name: 'Iowa' },
+      { abbr: 'KS', name: 'Kansas' },
+      { abbr: 'KY', name: 'Kentucky' },
+      { abbr: 'LA', name: 'Louisiana' },
+      { abbr: 'ME', name: 'Maine' },
+      { abbr: 'MD', name: 'Maryland' },
+      { abbr: 'MA', name: 'Massachusetts' },
+      { abbr: 'MI', name: 'Michigan' },
+      { abbr: 'MN', name: 'Minnesota' },
+      { abbr: 'MS', name: 'Mississippi' },
+      { abbr: 'MO', name: 'Missouri' },
+      { abbr: 'MT', name: 'Montana' },
+      { abbr: 'NE', name: 'Nebraska' },
+      { abbr: 'NV', name: 'Nevada' },
+      { abbr: 'NH', name: 'New Hampshire' },
+      { abbr: 'NJ', name: 'New Jersey' },
+      { abbr: 'NM', name: 'New Mexico' },
+      { abbr: 'NY', name: 'New York' },
+      { abbr: 'NC', name: 'North Carolina' },
+      { abbr: 'ND', name: 'North Dakota' },
+      { abbr: 'OH', name: 'Ohio' },
+      { abbr: 'OK', name: 'Oklahoma' },
+      { abbr: 'OR', name: 'Oregon' },
+      { abbr: 'PA', name: 'Pennsylvania' },
+      { abbr: 'RI', name: 'Rhode Island' },
+      { abbr: 'SC', name: 'South Carolina' },
+      { abbr: 'SD', name: 'South Dakota' },
+      { abbr: 'TN', name: 'Tennessee' },
+      { abbr: 'TX', name: 'Texas' },
+      { abbr: 'UT', name: 'Utah' },
+      { abbr: 'VT', name: 'Vermont' },
+      { abbr: 'VA', name: 'Virginia' },
+      { abbr: 'WA', name: 'Washington' },
+      { abbr: 'WV', name: 'West Virginia' },
+      { abbr: 'WI', name: 'Wisconsin' },
+      { abbr: 'WY', name: 'Wyoming' }
+    ];
+
+    const data = {
+      status: 'waiting',
+      tableConnected: false,
+      hasWriteAccess: false,
+      message: null,
+      messageType: '',
+      submitting: false,
+      states: US_STATES,
+      form: {
+        First: '',
+        Last: '',
+        Street1: '',
+        Street2: '',
+        City: '',
+        State: 'CO',
+        Zip: '',
+        Email: '',
+        Phone: '',
+        Light_Customer: false
+      },
+      errors: {}
+    };
+
+    let app = undefined;
+
+    function validateForm(form) {
+      const errors = {};
+
+      if (!form.First.trim()) {
+        errors.First = 'First name is required';
+      }
+
+      if (!form.Last.trim()) {
+        errors.Last = 'Last name is required';
+      }
+
+      if (!form.Street1.trim()) {
+        errors.Street1 = 'Street address is required';
+      }
+
+      if (!form.City.trim()) {
+        errors.City = 'City is required';
+      }
+
+      if (!form.State) {
+        errors.State = 'State is required';
+      }
+
+      if (!form.Zip.trim()) {
+        errors.Zip = 'ZIP code is required';
+      } else if (!/^\d{5}(-\d{4})?$/.test(form.Zip.trim())) {
+        errors.Zip = 'Invalid ZIP code format';
+      }
+
+      if (form.Email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.Email.trim())) {
+        errors.Email = 'Invalid email format';
+      }
+
+      return errors;
+    }
+
+    function resetForm() {
+      app.form = {
+        First: '',
+        Last: '',
+        Street1: '',
+        Street2: '',
+        City: '',
+        State: 'CO',
+        Zip: '',
+        Email: '',
+        Phone: '',
+        Light_Customer: false
+      };
+      app.errors = {};
+    }
+
+    async function submitForm() {
+      const errors = validateForm(app.form);
+      app.errors = errors;
+
+      if (Object.keys(errors).length > 0) {
+        app.message = 'Please fix the errors in the form.';
+        app.messageType = 'error';
+        return;
+      }
+
+      app.submitting = true;
+      app.message = null;
+
+      try {
+        const record = {
+          First: app.form.First.trim(),
+          Last: app.form.Last.trim(),
+          Street1: app.form.Street1.trim(),
+          Street2: app.form.Street2.trim(),
+          City: app.form.City.trim(),
+          State: app.form.State,
+          Zip: app.form.Zip.trim(),
+          Email: app.form.Email.trim(),
+          Phone: app.form.Phone.trim(),
+          Light_Customer: app.form.Light_Customer
+        };
+
+        await grist.docApi.applyUserActions([
+          ['AddRecord', 'Clients', null, record]
+        ]);
+
+        app.message = `Client "${record.First} ${record.Last}" added successfully!`;
+        app.messageType = 'success';
+        resetForm();
+      } catch (err) {
+        console.error('Error adding client:', err);
+        app.message = 'Error adding client: ' + (err.message || String(err));
+        app.messageType = 'error';
+      } finally {
+        app.submitting = false;
+      }
+    }
+
+    ready(function() {
+      grist.ready({
+        requiredAccess: 'full',
+        columns: []
+      });
+
+      grist.on('message', msg => {
+        if (msg.tableId) {
+          app.tableConnected = true;
+          app.status = 'ready';
+        }
+      });
+
+      // Check for write access
+      grist.docApi.fetchSelectedTable().then(() => {
+        app.hasWriteAccess = true;
+        app.status = 'ready';
+      }).catch(e => {
+        console.log('Access check:', e);
+      });
+
+      // Start ready after a short delay if no messages received
+      setTimeout(() => {
+        if (app.status === 'waiting') {
+          app.status = 'ready';
+        }
+      }, 1000);
+
+      app = new Vue({
+        el: '#app',
+        data: data,
+        methods: {
+          submitForm: submitForm,
+          resetForm: resetForm,
+          clearMessage: function() {
+            this.message = null;
+          }
+        }
+      });
+    });
+    </script>
+  </head>
+  <body>
+    <div id="app">
+      <template v-if="status === 'waiting'">
+        <div class="status-waiting">
+          <p>Connecting to Grist...</p>
+          <ul>
+            <li :class="{ done: tableConnected }">Waiting for table connection</li>
+            <li :class="{ done: hasWriteAccess }">Checking write access</li>
+          </ul>
+        </div>
+      </template>
+
+      <template v-else>
+        <div class="form-header">
+          <h1>Add New Client</h1>
+          <p>Fill out the form below to add a new client to the database.</p>
+        </div>
+
+        <div v-if="message" :class="['status-message', messageType]" @click="clearMessage">
+          {{ message }}
+        </div>
+
+        <form @submit.prevent="submitForm">
+          <div class="form-section">
+            <h2>Name</h2>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="first">First Name <span class="required">*</span></label>
+                <input
+                  type="text"
+                  id="first"
+                  v-model="form.First"
+                  :class="{ error: errors.First }"
+                  placeholder="John"
+                >
+              </div>
+              <div class="form-group">
+                <label for="last">Last Name <span class="required">*</span></label>
+                <input
+                  type="text"
+                  id="last"
+                  v-model="form.Last"
+                  :class="{ error: errors.Last }"
+                  placeholder="Smith"
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h2>Address</h2>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="street1">Street Address <span class="required">*</span></label>
+                <input
+                  type="text"
+                  id="street1"
+                  v-model="form.Street1"
+                  :class="{ error: errors.Street1 }"
+                  placeholder="123 Main St"
+                >
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="street2">Street Address 2</label>
+                <input
+                  type="text"
+                  id="street2"
+                  v-model="form.Street2"
+                  placeholder="Apt, Suite, Unit, etc. (optional)"
+                >
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="city">City <span class="required">*</span></label>
+                <input
+                  type="text"
+                  id="city"
+                  v-model="form.City"
+                  :class="{ error: errors.City }"
+                  placeholder="Denver"
+                >
+              </div>
+              <div class="form-group third">
+                <label for="state">State <span class="required">*</span></label>
+                <select
+                  id="state"
+                  v-model="form.State"
+                  :class="{ error: errors.State }"
+                >
+                  <option v-for="state in states" :value="state.abbr">{{ state.abbr ? state.abbr + ' - ' + state.name : state.name }}</option>
+                </select>
+              </div>
+              <div class="form-group third">
+                <label for="zip">ZIP Code <span class="required">*</span></label>
+                <input
+                  type="text"
+                  id="zip"
+                  v-model="form.Zip"
+                  :class="{ error: errors.Zip }"
+                  placeholder="80123"
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h2>Contact Information</h2>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="email">Email</label>
+                <input
+                  type="email"
+                  id="email"
+                  v-model="form.Email"
+                  :class="{ error: errors.Email }"
+                  placeholder="john.smith@email.com"
+                >
+              </div>
+              <div class="form-group">
+                <label for="phone">Phone</label>
+                <input
+                  type="tel"
+                  id="phone"
+                  v-model="form.Phone"
+                  placeholder="(303) 555-1234"
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h2>Options</h2>
+            <div class="checkbox-group">
+              <input
+                type="checkbox"
+                id="light_customer"
+                v-model="form.Light_Customer"
+              >
+              <label for="light_customer">Christmas Lights Customer</label>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" @click="resetForm">Clear Form</button>
+            <button type="submit" class="btn btn-primary" :disabled="submitting">
+              {{ submitting ? 'Adding...' : 'Add Client' }}
+            </button>
+          </div>
+        </form>
+      </template>
+    </div>
+  </body>
+</html>
