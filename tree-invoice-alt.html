@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.14 (Direct API)</title>
+    <title>Tree Invoice Alt v1.15 (Direct API)</title>
 
     <style>
       body {
@@ -431,6 +431,166 @@
         color: white;
       }
 
+      /* Editable invoice styles - inline editing that looks like the invoice */
+      .editable-invoice {
+        background: white;
+        width: 7.5in;
+        min-height: 10in;
+        margin: 1em auto;
+        padding: 0.5in;
+        box-sizing: border-box;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      }
+
+      .editable-invoice .edit-input,
+      .editable-invoice .edit-textarea {
+        background: #fffef0;
+        border: 1px dashed #ccc;
+        border-radius: 2px;
+        padding: 2px 4px;
+        font-family: inherit;
+        font-size: inherit;
+        color: inherit;
+        box-sizing: border-box;
+      }
+
+      .editable-invoice .edit-input:focus,
+      .editable-invoice .edit-textarea:focus {
+        outline: none;
+        border-color: #4a4;
+        background: #fffff0;
+      }
+
+      .editable-invoice .edit-textarea {
+        width: 100%;
+        min-height: 3em;
+        resize: vertical;
+      }
+
+      .editable-invoice .edit-input.short {
+        width: 80px;
+      }
+
+      .editable-invoice .edit-input.medium {
+        width: 120px;
+      }
+
+      .editable-invoice .edit-input.date {
+        width: 140px;
+      }
+
+      .editable-invoice .edit-input.number {
+        width: 100px;
+        text-align: right;
+      }
+
+      .editable-invoice .edit-inline {
+        display: inline-block;
+      }
+
+      .editable-invoice .edit-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        margin-bottom: 0.25em;
+      }
+
+      .editable-invoice .edit-label {
+        font-size: 0.75em;
+        color: #888;
+        text-transform: uppercase;
+      }
+
+      .editable-invoice .checkbox-field {
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        margin: 0.5em 0;
+      }
+
+      .editable-invoice .checkbox-field input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+      }
+
+      .editable-invoice .checkbox-field label {
+        font-size: 0.9em;
+        color: #666;
+      }
+
+      /* Editable items table */
+      .editable-invoice table.items .edit-input,
+      .editable-invoice table.items .edit-textarea {
+        margin: 0;
+      }
+
+      .editable-invoice table.items .edit-textarea {
+        min-height: 2.5em;
+      }
+
+      .editable-invoice table.items td {
+        vertical-align: top;
+      }
+
+      /* Notes section styling */
+      .editable-invoice .notes-section {
+        margin: 2em 0;
+      }
+
+      .editable-invoice .note-label {
+        font-size: 0.75em;
+        color: #888;
+        text-transform: uppercase;
+        margin-bottom: 0.25em;
+      }
+
+      /* Edit mode indicator */
+      .edit-mode-bar {
+        background: #1a5a1a;
+        color: white;
+        padding: 0.5em 1em;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-radius: 4px 4px 0 0;
+        margin-top: 1em;
+        max-width: 7.5in;
+        margin-left: auto;
+        margin-right: auto;
+        box-sizing: border-box;
+      }
+
+      .edit-mode-bar .mode-label {
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 0.9em;
+      }
+
+      .editable-invoice {
+        border-radius: 0 0 4px 4px;
+        margin-top: 0;
+      }
+
+      @media print {
+        .edit-mode-bar {
+          display: none !important;
+        }
+        .editable-invoice {
+          border-radius: 0;
+        }
+        .editable-invoice .edit-input,
+        .editable-invoice .edit-textarea {
+          background: transparent !important;
+          border: none !important;
+          padding: 0 !important;
+        }
+        .editable-invoice .edit-label,
+        .editable-invoice .note-label,
+        .editable-invoice .checkbox-field {
+          display: none !important;
+        }
+      }
+
       div.print {
         position: fixed;
         left: 0;
@@ -834,6 +994,7 @@
       clients: [],
       invoicesForClient: [],
       // Editor state
+      editMode: 'preview',
       saveStatus: '',
       treeSaveStatus: {}
     };
@@ -1304,118 +1465,20 @@
           </div>
         </div>
 
-        <!-- Editor Panel -->
-        <div class="editor-panel" v-if="selectedInvoiceId && invoice">
-          <div class="panel-title">
-            Edit Invoice
-            <span v-if="saveStatus" :class="['save-status', saveStatus]">
-              {{ saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : 'Error' }}
-            </span>
-          </div>
-
-          <!-- Invoicer Selection -->
-          <div class="selector-row">
+        <!-- Mode Toggle in Selector Panel -->
+        <div class="editor-panel" v-if="selectedInvoiceId" style="padding: 0.5em 1em;">
+          <div class="selector-row" style="justify-content: space-between;">
             <div class="selector-group">
-              <label>Invoicer</label>
-              <select @change="onInvoicerChanged" :value="selectedInvoicerId">
-                <option value="">-- Select Invoicer --</option>
-                <option v-for="invoicer in invoicers" :key="invoicer.id" :value="invoicer.id">
-                  {{ invoicer.name }}
-                </option>
+              <label>View Mode</label>
+              <select v-model="editMode">
+                <option value="preview">Preview (Print Ready)</option>
+                <option value="edit">Edit Invoice</option>
               </select>
             </div>
-          </div>
-
-          <!-- Invoice Details Section -->
-          <div class="editor-section">
-            <div class="editor-section-title">Invoice Details</div>
-            <div class="editor-row">
-              <div class="editor-field small">
-                <label>Number</label>
-                <input type="number" :value="invoice.Number" @input="updateInvoiceNumber('Number', $event)">
-              </div>
-              <div class="editor-field small">
-                <label>Issued</label>
-                <input type="date" :value="formatDateForInput(invoice.Issued)" @input="updateInvoiceDate('Issued', $event)">
-              </div>
-              <div class="editor-field small">
-                <label>Due</label>
-                <input type="date" :value="formatDateForInput(invoice.Due)" @input="updateInvoiceDate('Due', $event)">
-              </div>
-              <div class="editor-field small">
-                <label>Quote Date</label>
-                <input type="date" :value="formatDateForInput(invoice.Quote_Date)" @input="updateInvoiceDate('Quote_Date', $event)">
-              </div>
-              <div class="editor-field small">
-                <label>Total</label>
-                <input type="number" :value="invoice.Total" @input="updateInvoiceNumber('Total', $event)">
-              </div>
-              <div class="editor-field checkbox">
-                <input type="checkbox" :checked="invoice.Invoice" @change="updateInvoiceCheckbox('Invoice', $event)">
-                <label>Is Invoice</label>
-              </div>
-              <div class="editor-field checkbox">
-                <input type="checkbox" :checked="invoice.Paid" @change="updateInvoiceCheckbox('Paid', $event)">
-                <label>Paid</label>
-              </div>
-            </div>
-          </div>
-
-          <!-- Notes Section -->
-          <div class="editor-section">
-            <div class="editor-section-title">Notes</div>
-            <div class="editor-row">
-              <div class="editor-field wide">
-                <label>Quote Note</label>
-                <textarea :value="invoice.QuoteNote" @input="updateInvoiceText('QuoteNote', $event)"></textarea>
-              </div>
-              <div class="editor-field wide">
-                <label>Invoice Note</label>
-                <textarea :value="invoice.InvoiceNote" @input="updateInvoiceText('InvoiceNote', $event)"></textarea>
-              </div>
-            </div>
-            <div class="editor-row">
-              <div class="editor-field wide">
-                <label>Final Quote Text</label>
-                <textarea :value="invoice.FinalQuoteText" @input="updateInvoiceText('FinalQuoteText', $event)"></textarea>
-              </div>
-              <div class="editor-field wide">
-                <label>Final Invoice Text</label>
-                <textarea :value="invoice.FinalInvoiceText" @input="updateInvoiceText('FinalInvoiceText', $event)"></textarea>
-              </div>
-            </div>
-          </div>
-
-          <!-- Tree Items Section -->
-          <div class="editor-section" v-if="invoice.Items && invoice.Items.length > 0">
-            <div class="editor-section-title">Line Items (Trees)</div>
-            <div v-for="(item, index) in invoice.Items" :key="item.id" class="tree-item-editor">
-              <div class="tree-item-header">
-                <span class="tree-item-number">Item {{ index + 1 }}</span>
-                <span v-if="treeSaveStatus[item.id]" :class="['save-status', treeSaveStatus[item.id]]">
-                  {{ treeSaveStatus[item.id] === 'saving' ? 'Saving...' : treeSaveStatus[item.id] === 'saved' ? 'Saved' : 'Error' }}
-                </span>
-              </div>
-              <div class="editor-row">
-                <div class="editor-field wide">
-                  <label>Description</label>
-                  <textarea :value="item.Description" @input="updateTreeText(item.id, 'Description', $event)"></textarea>
-                </div>
-              </div>
-              <div class="editor-row">
-                <div class="editor-field small">
-                  <label>Price</label>
-                  <input type="number" :value="item.Price" @input="updateTreeNumber(item.id, 'Price', $event)">
-                </div>
-                <div class="editor-field small">
-                  <label>Quantity</label>
-                  <input type="number" :value="item.Quantity" @input="updateTreeNumber(item.id, 'Quantity', $event)">
-                </div>
-                <div class="editor-field small">
-                  <label>Total</label>
-                  <input type="number" :value="item.Total" @input="updateTreeNumber(item.id, 'Total', $event)">
-                </div>
-              </div>
+            <div style="display: flex; align-items: center; gap: 1em;">
+              <span v-if="saveStatus" :class="['save-status', saveStatus]">
+                {{ saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : 'Error' }}
+              </span>
             </div>
           </div>
         </div>
@@ -1426,7 +1489,151 @@
       </div>
 
       <template v-if="invoice">
-      <div class="invoice-content">
+
+      <!-- ==================== EDIT MODE ==================== -->
+      <template v-if="editMode === 'edit'">
+        <div class="edit-mode-bar">
+          <span class="mode-label">Edit Mode</span>
+          <span v-if="saveStatus" :class="['save-status', saveStatus]">
+            {{ saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : 'Error' }}
+          </span>
+        </div>
+        <div class="editable-invoice">
+          <!-- Invoicer Selection -->
+          <div style="margin-bottom: 1em; padding-bottom: 1em; border-bottom: 1px dashed #ccc;">
+            <span class="edit-label">Invoicer:</span>
+            <select @change="onInvoicerChanged" :value="selectedInvoicerId" style="padding: 0.25em; font-size: 1em;">
+              <option value="">-- Select Invoicer --</option>
+              <option v-for="invoicer in invoicers" :key="invoicer.id" :value="invoicer.id">
+                {{ invoicer.name }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Header (same as preview) -->
+          <template v-if="invoice.Invoicer && invoice.Invoicer.Name === 'Stroikos Services'">
+            <div class="letterhead">
+              <img class="logo" src="https://stroikos.com/wp-content/uploads/2024/10/Stroikos-services-logo.png" alt="Stroikos Logo">
+              <div class="letterhead-text">
+                <div class="company-name">Stroikos Services — Tree Care</div>
+                <div class="company-details">Arbores amamus</div>
+              </div>
+            </div>
+          </template>
+          <template v-else-if="invoice.Invoicer && invoice.Invoicer.Name === 'A Stump Man'">
+            <div class="stump-man-container">
+              <div class="stump-man-header">A STUMP MAN</div>
+              <img class="stump-man-logo" src="https://stroikos.com/wp-content/uploads/2025/06/A-Stump-Man-Logo.jpg" alt="A Stump Man Logo">
+            </div>
+          </template>
+
+          <!-- Client & Invoice Info -->
+          <div class="top">
+            <div class="supplier">
+              <div class="address-title">Client</div>
+              <div v-if="invoice.Client">
+                <div class="address">
+                  <span class="name">{{ invoice.Client.First }} {{ invoice.Client.Last }}</span><br />
+                  {{ invoice.Client.Street1 }}<br />
+                  <template v-if="invoice.Client.Street2">{{ invoice.Client.Street2 }}<br /></template>
+                  {{ invoice.Client.City }} {{ invoice.Client.State }} {{ invoice.Client.Zip }}
+                </div>
+                <div class="invoice-meta" style="margin-top: 0.5em;">
+                  <div class="edit-row">
+                    <span class="edit-label">Type:</span>
+                    <label style="margin-right: 1em;"><input type="checkbox" :checked="invoice.Invoice" @change="updateInvoiceCheckbox('Invoice', $event)"> Invoice</label>
+                    <label><input type="checkbox" :checked="invoice.Paid" @change="updateInvoiceCheckbox('Paid', $event)"> Paid</label>
+                  </div>
+                  <div class="edit-row">
+                    <span class="edit-label">Number:</span>
+                    <input type="number" class="edit-input short" :value="invoice.Number" @input="updateInvoiceNumber('Number', $event)">
+                  </div>
+                  <div class="edit-row">
+                    <span class="edit-label">{{ invoice.Invoice ? 'Issued' : 'Quote Date' }}:</span>
+                    <input type="date" class="edit-input date" :value="formatDateForInput(invoice.Invoice ? invoice.Issued : invoice.Quote_Date)" @input="updateInvoiceDate(invoice.Invoice ? 'Issued' : 'Quote_Date', $event)">
+                  </div>
+                  <div class="edit-row" v-if="invoice.Invoice">
+                    <span class="edit-label">Due:</span>
+                    <input type="date" class="edit-input date" :value="formatDateForInput(invoice.Due)" @input="updateInvoiceDate('Due', $event)">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <template v-if="invoice.Invoicer && invoice.Invoicer.Name === 'Stroikos Services'">
+              <div class="supplier">
+                <div class="address-title">From</div>
+                <div class="address">
+                  <span class="name">{{ invoice.Invoicer.Name }}</span><br />
+                  {{ invoice.Invoicer.Street1 }}<br />
+                  <template v-if="invoice.Invoicer.Street2">{{ invoice.Invoicer.Street2 }}<br /></template>
+                  {{ invoice.Invoicer.City }} {{ invoice.Invoicer.State }} {{ invoice.Invoicer.Zip }}
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Greeting & Note -->
+          <div style="margin: 2em 0;">
+            <p v-if="invoice.Client">
+              Dear {{ invoice.Client.First }},
+            </p>
+            <div style="margin-top: 1em;">
+              <div class="note-label">{{ invoice.Invoice ? 'Invoice' : 'Quote' }} Note:</div>
+              <textarea class="edit-textarea" :value="invoice.Invoice ? invoice.InvoiceNote : invoice.QuoteNote" @input="updateInvoiceText(invoice.Invoice ? 'InvoiceNote' : 'QuoteNote', $event)" placeholder="Add a note..."></textarea>
+            </div>
+          </div>
+
+          <!-- Items Table -->
+          <table class="items">
+            <tr>
+              <th>Description</th>
+              <th class="money" style="width: 100px;">Price</th>
+            </tr>
+            <tr v-for="(item, index) in invoice.Items" :key="item.id">
+              <td>
+                <textarea class="edit-textarea" :value="item.Description" @input="updateTreeText(item.id, 'Description', $event)" placeholder="Item description..."></textarea>
+                <span v-if="treeSaveStatus[item.id]" :class="['save-status', treeSaveStatus[item.id]]" style="font-size: 0.75em;">
+                  {{ treeSaveStatus[item.id] === 'saving' ? 'Saving...' : treeSaveStatus[item.id] === 'saved' ? '✓' : '!' }}
+                </span>
+              </td>
+              <td class="money">
+                <input type="number" class="edit-input number" :value="item.Total" @input="updateTreeNumber(item.id, 'Total', $event)">
+              </td>
+            </tr>
+            <tr class="total-row">
+              <td class="total-label">Total</td>
+              <td class="money">
+                <input type="number" class="edit-input number" :value="invoice.Total" @input="updateInvoiceNumber('Total', $event)" style="font-weight: bold;">
+              </td>
+            </tr>
+          </table>
+
+          <!-- Final Text -->
+          <div style="margin-top: 2em;">
+            <div class="note-label">Final {{ invoice.Invoice ? 'Invoice' : 'Quote' }} Text:</div>
+            <textarea class="edit-textarea" :value="invoice.Invoice ? invoice.FinalInvoiceText : invoice.FinalQuoteText" @input="updateInvoiceText(invoice.Invoice ? 'FinalInvoiceText' : 'FinalQuoteText', $event)" placeholder="Closing text..."></textarea>
+            <p style="margin-top: 1em;">Gratefully,</p>
+            <br/>
+            <p v-if="invoice.Invoicer && typeof invoice.Invoicer === 'object'">
+              {{ invoice.Invoicer.First }} {{ invoice.Invoicer.Last }}
+            </p>
+            <div v-if="invoice.Invoicer && typeof invoice.Invoicer === 'object'">
+              <div class="email">{{ invoice.Invoicer.Email }}</div>
+              <div class="phone">{{ invoice.Invoicer.Phone }}</div>
+              <div class="website" v-if="invoice.Invoicer.Website">{{ invoice.Invoicer.Website }}</div>
+            </div>
+          </div>
+
+          <!-- Paid Stamp -->
+          <template v-if="invoice.Paid">
+            <div class="paid">PAID</div>
+          </template>
+        </div>
+      </template>
+
+      <!-- ==================== PREVIEW MODE ==================== -->
+      <div class="invoice-content" v-else>
         <template v-if="invoice.Invoicer && invoice.Invoicer.Name === 'Stroikos Services'">
           <div class="letterhead">
             <img class="logo" src="https://stroikos.com/wp-content/uploads/2024/10/Stroikos-services-logo.png" alt="Stroikos Logo">
