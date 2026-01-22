@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.23 (Direct API)</title>
+    <title>Tree Invoice Alt v1.24 (Direct API)</title>
 
     <style>
       body {
@@ -1011,7 +1011,6 @@
         FinalInvoiceText: invoiceRow.FinalInvoiceText,
         Invoice: invoiceRow.Invoice,
         Total: invoiceRow.Total,
-        Paid: invoiceRow.Paid,
 
         // Nested Client object
         Client: clientRow ? {
@@ -1780,8 +1779,7 @@
                 <div class="invoice-meta" style="margin-top: 0.5em;">
                   <div class="edit-row">
                     <span class="edit-label">Type:</span>
-                    <label style="margin-right: 1em;"><input type="checkbox" :checked="invoice.Invoice" @change="updateInvoiceCheckbox('Invoice', $event)"> Invoice</label>
-                    <label><input type="checkbox" :checked="invoice.Paid" @change="updateInvoiceCheckbox('Paid', $event)"> Paid</label>
+                    <label><input type="checkbox" :checked="invoice.Invoice" @change="updateInvoiceCheckbox('Invoice', $event)"> Invoice (uncheck for Quote)</label>
                   </div>
                   <div class="edit-row">
                     <span class="edit-label">{{ invoice.Invoice ? 'Invoice' : 'Quote' }} #:</span>
@@ -1865,10 +1863,6 @@
             </div>
           </div>
 
-          <!-- Paid Stamp -->
-          <template v-if="invoice.Paid">
-            <div class="paid">PAID</div>
-          </template>
         </div>
       </template>
 
@@ -2016,13 +2010,6 @@
             </template>
           </div>
         </div>
-
-        <!-- Direct API version - no References column needed -->
-        <template v-if="invoice.Paid">
-          <div class="paid">
-            PAID
-          </div>
-        </template>
 
         <div class="print">
           <a href="javascript:window.print()">Print</a>
