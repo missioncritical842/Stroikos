@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.9 (Direct API)</title>
+    <title>Tree Invoice Alt v1.10 (Direct API)</title>
 
     <style>
       body {
@@ -185,19 +185,31 @@
       @media print {
         @page {
           size: letter;
-          margin: 0.75in;
+          margin: 0.5in;
         }
 
         body {
-          background: #f5f5f5 !important;
+          background: #e0e0e0 !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
 
         .invoice-content {
           background: white !important;
-          padding: 0.5in;
-          box-shadow: none;
+          box-shadow: none !important;
+          margin: 0 !important;
+          width: 100% !important;
+          min-height: auto !important;
+        }
+
+        .invoice-page {
+          page-break-after: always;
+          box-shadow: none !important;
+          margin-bottom: 0 !important;
+        }
+
+        .invoice-page:last-child {
+          page-break-after: avoid;
         }
 
         div.print,
@@ -211,11 +223,26 @@
         background: #e0e0e0;
       }
 
+      /* Letter size page simulation: 8.5in x 11in with 0.5in margins = 7.5in x 10in content */
       .invoice-content {
         background: white;
+        width: 7.5in;
+        min-height: 10in;
+        margin: 1em auto;
         padding: 0.5in;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        margin-top: 1em;
+        box-sizing: border-box;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      }
+
+      /* For multi-page invoices */
+      .invoice-page {
+        background: white;
+        width: 7.5in;
+        min-height: 10in;
+        margin: 1em auto;
+        padding: 0.5in;
+        box-sizing: border-box;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
       }
 
       /* Selector panel - won't print */
@@ -652,8 +679,10 @@
       haveRows: false,
       tablesLoaded: false,
       // Selector state
+      selectedInvoicerId: null,
       selectedClientId: null,
       selectedInvoiceId: null,
+      invoicers: [],
       clients: [],
       invoicesForClient: []
     };
@@ -739,25 +768,58 @@
       }
     }
 
-    // Populate the client selector with sorted client names
-    function populateClientSelector() {
-      if (!tableCache.Clients) return;
+    // Populate the invoicer selector with Name-First format
+    function populateInvoicerSelector() {
+      if (!tableCache.Invoicer) return;
 
-      // Get clients who have at least one invoice
-      const clientIdsWithInvoices = new Set(
-        tableCache.Invoices2.map(inv => inv.Client).filter(Boolean)
+      // Get invoicers who have at least one invoice
+      const invoicerIdsWithInvoices = new Set(
+        tableCache.Invoices2.map(inv => inv.Invoicer).filter(Boolean)
+      );
+
+      // Filter and sort invoicers
+      const invoicersWithInvoices = tableCache.Invoicer
+        .filter(i => invoicerIdsWithInvoices.has(i.id))
+        .map(i => ({
+          id: i.id,
+          name: [i.Name, i.First].filter(Boolean).join('-') || `Invoicer #${i.id}`
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      data.invoicers = invoicersWithInvoices;
+    }
+
+    // Update client list when invoicer is selected
+    function onInvoicerSelected(invoicerId) {
+      data.selectedInvoicerId = invoicerId;
+      data.selectedClientId = null;
+      data.selectedInvoiceId = null;
+      data.invoice = '';
+      data.clients = [];
+      data.invoicesForClient = [];
+
+      if (!invoicerId) {
+        return;
+      }
+
+      // Get clients who have invoices with this invoicer
+      const clientIdsForInvoicer = new Set(
+        tableCache.Invoices2
+          .filter(inv => inv.Invoicer === invoicerId)
+          .map(inv => inv.Client)
+          .filter(Boolean)
       );
 
       // Filter and sort clients
-      const clientsWithInvoices = tableCache.Clients
-        .filter(c => clientIdsWithInvoices.has(c.id))
+      const clientsForInvoicer = tableCache.Clients
+        .filter(c => clientIdsForInvoicer.has(c.id))
         .map(c => ({
           id: c.id,
           name: [c.First, c.Last].filter(Boolean).join(' ') || `Client #${c.id}`
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
-      data.clients = clientsWithInvoices;
+      data.clients = clientsForInvoicer;
     }
 
     // Update invoice list when client is selected
@@ -765,15 +827,15 @@
       data.selectedClientId = clientId;
       data.selectedInvoiceId = null;
       data.invoice = '';
+      data.invoicesForClient = [];
 
       if (!clientId) {
-        data.invoicesForClient = [];
         return;
       }
 
-      // Filter invoices for this client, sorted by number descending
+      // Filter invoices for this client AND invoicer, sorted by number descending
       const invoices = tableCache.Invoices2
-        .filter(inv => inv.Client === clientId)
+        .filter(inv => inv.Client === clientId && inv.Invoicer === data.selectedInvoicerId)
         .map(inv => ({
           id: inv.id,
           number: inv.Number,
@@ -813,7 +875,7 @@
         data.tablesLoaded = true;
 
         // Populate selectors
-        populateClientSelector();
+        populateInvoicerSelector();
 
         // Rebuild current invoice if we have one
         if (data.invoice && data.invoice.id) {
@@ -821,9 +883,12 @@
           data.invoice = invoice;
         }
 
-        // Re-filter invoices if client was selected
-        if (data.selectedClientId) {
-          onClientSelected(data.selectedClientId);
+        // Re-filter if selections were made
+        if (data.selectedInvoicerId) {
+          onInvoicerSelected(data.selectedInvoicerId);
+          if (data.selectedClientId) {
+            onClientSelected(data.selectedClientId);
+          }
         }
 
         data.status = '';
@@ -838,7 +903,7 @@
         data.status = 'Loading tables...';
         await fetchAllTables();
         data.tablesLoaded = true;
-        populateClientSelector();
+        populateInvoicerSelector();
         data.status = '';
       } catch (err) {
         handleError(err);
@@ -873,6 +938,9 @@
         el: '#app',
         data: data,
         methods: {
+          onInvoicerSelected: function(event) {
+            onInvoicerSelected(event.target.value ? parseInt(event.target.value) : null);
+          },
           onClientSelected: function(event) {
             onClientSelected(event.target.value ? parseInt(event.target.value) : null);
           },
@@ -890,8 +958,17 @@
       <div class="selector-panel">
         <div class="selector-row">
           <div class="selector-group">
+            <label>Invoicer</label>
+            <select @change="onInvoicerSelected" :value="selectedInvoicerId">
+              <option value="">-- Select Invoicer --</option>
+              <option v-for="invoicer in invoicers" :key="invoicer.id" :value="invoicer.id">
+                {{ invoicer.name }}
+              </option>
+            </select>
+          </div>
+          <div class="selector-group">
             <label>Client</label>
-            <select @change="onClientSelected" :value="selectedClientId">
+            <select @change="onClientSelected" :value="selectedClientId" :disabled="!selectedInvoicerId">
               <option value="">-- Select Client --</option>
               <option v-for="client in clients" :key="client.id" :value="client.id">
                 {{ client.name }}
