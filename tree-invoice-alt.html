@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.21 (Direct API)</title>
+    <title>Tree Invoice Alt v1.22 (Direct API)</title>
 
     <style>
       body {
@@ -1275,27 +1275,24 @@
           await grist.docApi.applyUserActions(actions);
         }
 
-        // Update caches
-        for (const [field, value] of Object.entries(data.pendingInvoiceChanges)) {
-          const cachedInvoice = findById(tableCache.Invoices2, data.invoice.id);
-          if (cachedInvoice) {
-            cachedInvoice[field] = value;
-          }
-        }
-
-        for (const [treeId, changes] of Object.entries(data.pendingTreeChanges)) {
-          const cachedTree = findById(tableCache.Trees, parseInt(treeId));
-          if (cachedTree) {
-            for (const [field, value] of Object.entries(changes)) {
-              cachedTree[field] = value;
-            }
-          }
-        }
-
         // Clear pending changes
         data.pendingInvoiceChanges = {};
         data.pendingTreeChanges = {};
         data.hasUnsavedChanges = false;
+
+        // Refresh tables to get recalculated formula values (like Total)
+        const savedInvoiceId = data.invoice.id;
+        const [invoicesTable, treesTable] = await Promise.all([
+          grist.docApi.fetchTable('Invoices2'),
+          grist.docApi.fetchTable('Trees')
+        ]);
+        tableCache.Invoices2 = tableToRows(invoicesTable);
+        tableCache.Trees = tableToRows(treesTable);
+
+        // Rebuild the invoice with fresh data
+        const invoice = buildInvoiceFromRow(savedInvoiceId);
+        data.invoice = invoice;
+        window.invoice = invoice;
 
         data.saveStatus = 'saved';
         setTimeout(() => {
