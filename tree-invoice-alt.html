@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.16 (Direct API)</title>
+    <title>Tree Invoice Alt v1.17 (Direct API)</title>
 
     <style>
       body {
@@ -1115,25 +1115,19 @@
       data.invoicers = allInvoicers;
     }
 
-    // Populate client selector with clients who have invoices
+    // Populate client selector with all clients
     function populateClientSelector() {
       if (!tableCache.Clients) return;
 
-      // Get clients who have at least one invoice
-      const clientIdsWithInvoices = new Set(
-        tableCache.Invoices2.map(inv => inv.Client).filter(Boolean)
-      );
-
-      // Filter and sort clients
-      const clientsWithInvoices = tableCache.Clients
-        .filter(c => clientIdsWithInvoices.has(c.id))
+      // Show all clients, sorted by name
+      const allClients = tableCache.Clients
         .map(c => ({
           id: c.id,
           name: [c.First, c.Last].filter(Boolean).join(' ') || `Client #${c.id}`
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
-      data.clients = clientsWithInvoices;
+      data.clients = allClients;
     }
 
     // Update invoice list when client is selected
