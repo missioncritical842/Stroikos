@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.11 (Direct API)</title>
+    <title>Tree Invoice Alt v1.12 (Direct API)</title>
 
     <style>
       body {
@@ -899,6 +899,12 @@
     async function refreshTables() {
       try {
         data.status = 'Refreshing tables...';
+
+        // Save current selections before refresh
+        const savedClientId = data.selectedClientId;
+        const savedInvoiceId = data.selectedInvoiceId;
+        const savedInvoicerId = data.selectedInvoicerId;
+
         data.tablesLoaded = false;
         await fetchAllTables();
         data.tablesLoaded = true;
@@ -907,19 +913,33 @@
         populateClientSelector();
         populateInvoicerSelector();
 
+        // Restore selections
+        data.selectedClientId = savedClientId;
+        data.selectedInvoiceId = savedInvoiceId;
+        data.selectedInvoicerId = savedInvoicerId;
+
+        // Re-filter invoices for client (without clearing selections)
+        if (savedClientId) {
+          const invoices = tableCache.Invoices2
+            .filter(inv => inv.Client === savedClientId)
+            .map(inv => ({
+              id: inv.id,
+              number: inv.Number,
+              isInvoice: inv.Invoice,
+              label: `${inv.Invoice ? 'Invoice' : 'Quote'} #${inv.Number}`
+            }))
+            .sort((a, b) => b.number - a.number);
+          data.invoicesForClient = invoices;
+        }
+
         // Rebuild current invoice if we have one
-        if (data.invoice && data.invoice.id) {
-          const invoice = buildInvoiceFromRow(data.invoice.id);
+        if (savedInvoiceId) {
+          const invoice = buildInvoiceFromRow(savedInvoiceId);
           data.invoice = invoice;
-          // Restore invoicer selection
+          // Update invoicer selection to match invoice's current invoicer
           if (invoice.Invoicer && invoice.Invoicer.id) {
             data.selectedInvoicerId = invoice.Invoicer.id;
           }
-        }
-
-        // Re-filter invoices if client was selected
-        if (data.selectedClientId) {
-          onClientSelected(data.selectedClientId);
         }
 
         data.status = '';
