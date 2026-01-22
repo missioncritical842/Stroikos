@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.24 (Direct API)</title>
+    <title>Tree Invoice Alt v1.25 (Direct API)</title>
 
     <style>
       body {
@@ -1653,12 +1653,36 @@
             el.style.height = 'auto';
             el.style.height = el.scrollHeight + 'px';
           },
+          // Resize all textareas in the document
+          resizeAllTextareas: function() {
+            this.$nextTick(() => {
+              const textareas = document.querySelectorAll('.edit-textarea');
+              textareas.forEach(el => {
+                el.style.height = 'auto';
+                el.style.height = el.scrollHeight + 'px';
+              });
+            });
+          },
           // Calculate total from items
           calculateTotal: function() {
             if (!this.invoice || !this.invoice.Items || !Array.isArray(this.invoice.Items)) {
               return 0;
             }
             return this.invoice.Items.reduce((sum, item) => sum + (Number(item.Total) || 0), 0);
+          }
+        },
+        watch: {
+          // Auto-resize textareas when entering edit mode
+          editMode: function(newMode) {
+            if (newMode === 'edit') {
+              this.resizeAllTextareas();
+            }
+          },
+          // Auto-resize textareas when invoice changes while in edit mode
+          invoice: function() {
+            if (this.editMode === 'edit') {
+              this.resizeAllTextareas();
+            }
           }
         }
       });
