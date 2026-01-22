@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.13 (Direct API)</title>
+    <title>Tree Invoice Alt v1.14 (Direct API)</title>
 
     <style>
       body {
@@ -311,6 +311,124 @@
       .selector-group {
         display: flex;
         flex-direction: column;
+      }
+
+      /* Editor form styles */
+      .editor-section {
+        margin-top: 1em;
+        padding-top: 1em;
+        border-top: 1px solid #3a7a3a;
+      }
+
+      .editor-section-title {
+        font-size: 0.75em;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #8f8;
+        margin-bottom: 0.5em;
+      }
+
+      .editor-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1em;
+        margin-bottom: 0.5em;
+      }
+
+      .editor-field {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 150px;
+      }
+
+      .editor-field.small {
+        flex: 0 0 100px;
+        min-width: 100px;
+      }
+
+      .editor-field.wide {
+        flex: 2;
+        min-width: 300px;
+      }
+
+      .editor-field label {
+        font-size: 0.8em;
+        color: #aaa;
+        margin-bottom: 0.25em;
+      }
+
+      .editor-field input,
+      .editor-field textarea {
+        padding: 0.5em;
+        border: none;
+        border-radius: 4px;
+        font-size: 0.9em;
+        font-family: inherit;
+      }
+
+      .editor-field textarea {
+        min-height: 60px;
+        resize: vertical;
+      }
+
+      .editor-field input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+      }
+
+      .editor-field.checkbox {
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5em;
+        min-width: auto;
+        flex: 0 0 auto;
+      }
+
+      .editor-field.checkbox label {
+        margin-bottom: 0;
+      }
+
+      /* Tree items editor */
+      .tree-item-editor {
+        background: #2a6a2a;
+        padding: 0.75em;
+        border-radius: 4px;
+        margin-bottom: 0.5em;
+      }
+
+      .tree-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5em;
+      }
+
+      .tree-item-number {
+        font-size: 0.8em;
+        color: #8f8;
+      }
+
+      .save-status {
+        font-size: 0.8em;
+        padding: 0.25em 0.5em;
+        border-radius: 3px;
+        margin-left: 1em;
+      }
+
+      .save-status.saving {
+        background: #ff9;
+        color: #333;
+      }
+
+      .save-status.saved {
+        background: #4a4;
+        color: white;
+      }
+
+      .save-status.error {
+        background: #a44;
+        color: white;
       }
 
       div.print {
@@ -714,7 +832,10 @@
       selectedInvoiceId: null,
       invoicers: [],
       clients: [],
-      invoicesForClient: []
+      invoicesForClient: [],
+      // Editor state
+      saveStatus: '',
+      treeSaveStatus: {}
     };
     let app = undefined;
 
@@ -859,6 +980,97 @@
 
       data.invoicesForClient = invoices;
     }
+
+    // Debounce helper
+    function debounce(func, wait) {
+      let timeout;
+      return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+      };
+    }
+
+    // Save status tracking
+    const saveStatus = {
+      invoice: '',
+      trees: {}
+    };
+
+    // Update an invoice field in Grist
+    async function updateInvoiceField(field, value) {
+      if (!data.invoice || !data.invoice.id) return;
+
+      try {
+        data.saveStatus = 'saving';
+
+        // Convert date strings to timestamps if needed
+        if (['Issued', 'Due', 'Quote_Date'].includes(field) && value) {
+          const date = new Date(value);
+          if (!isNaN(date.getTime())) {
+            value = Math.floor(date.getTime() / 1000);
+          }
+        }
+
+        await grist.docApi.applyUserActions([
+          ['UpdateRecord', 'Invoices2', data.invoice.id, { [field]: value }]
+        ]);
+
+        // Update local cache
+        const cachedInvoice = findById(tableCache.Invoices2, data.invoice.id);
+        if (cachedInvoice) {
+          cachedInvoice[field] = value;
+        }
+
+        data.saveStatus = 'saved';
+        setTimeout(() => { if (data.saveStatus === 'saved') data.saveStatus = ''; }, 1500);
+      } catch (err) {
+        console.error('Failed to update invoice field:', field, err);
+        data.saveStatus = 'error';
+      }
+    }
+
+    // Debounced version for text inputs
+    const debouncedUpdateInvoiceField = debounce(updateInvoiceField, 500);
+
+    // Update a tree item field in Grist
+    async function updateTreeField(treeId, field, value) {
+      if (!treeId) return;
+
+      try {
+        Vue.set(data.treeSaveStatus, treeId, 'saving');
+
+        await grist.docApi.applyUserActions([
+          ['UpdateRecord', 'Trees', treeId, { [field]: value }]
+        ]);
+
+        // Update local cache
+        const cachedTree = findById(tableCache.Trees, treeId);
+        if (cachedTree) {
+          cachedTree[field] = value;
+        }
+
+        // Update the displayed invoice items
+        if (data.invoice && data.invoice.Items) {
+          const item = data.invoice.Items.find(i => i.id === treeId);
+          if (item) {
+            item[field] = value;
+          }
+        }
+
+        Vue.set(data.treeSaveStatus, treeId, 'saved');
+        setTimeout(() => {
+          if (data.treeSaveStatus[treeId] === 'saved') {
+            Vue.set(data.treeSaveStatus, treeId, '');
+          }
+        }, 1500);
+      } catch (err) {
+        console.error('Failed to update tree field:', treeId, field, err);
+        Vue.set(data.treeSaveStatus, treeId, 'error');
+      }
+    }
+
+    // Debounced version for text inputs
+    const debouncedUpdateTreeField = debounce(updateTreeField, 500);
 
     // Update the invoicer on the current invoice in Grist
     async function onInvoicerChanged(invoicerId) {
@@ -1028,6 +1240,35 @@
           },
           onInvoicerChanged: function(event) {
             onInvoicerChanged(event.target.value ? parseInt(event.target.value) : null);
+          },
+          // Invoice field editors
+          updateInvoiceText: function(field, event) {
+            debouncedUpdateInvoiceField(field, event.target.value);
+          },
+          updateInvoiceNumber: function(field, event) {
+            const value = parseFloat(event.target.value) || 0;
+            debouncedUpdateInvoiceField(field, value);
+          },
+          updateInvoiceCheckbox: function(field, event) {
+            updateInvoiceField(field, event.target.checked);
+          },
+          updateInvoiceDate: function(field, event) {
+            debouncedUpdateInvoiceField(field, event.target.value);
+          },
+          // Tree field editors
+          updateTreeText: function(treeId, field, event) {
+            debouncedUpdateTreeField(treeId, field, event.target.value);
+          },
+          updateTreeNumber: function(treeId, field, event) {
+            const value = parseFloat(event.target.value) || 0;
+            debouncedUpdateTreeField(treeId, field, value);
+          },
+          // Helper to format date for input
+          formatDateForInput: function(timestamp) {
+            if (!timestamp) return '';
+            const date = new Date(timestamp * 1000);
+            if (isNaN(date.getTime())) return '';
+            return date.toISOString().split('T')[0];
           }
         }
       });
@@ -1064,17 +1305,117 @@
         </div>
 
         <!-- Editor Panel -->
-        <div class="editor-panel" v-if="selectedInvoiceId">
-          <div class="panel-title">Edit Invoice</div>
+        <div class="editor-panel" v-if="selectedInvoiceId && invoice">
+          <div class="panel-title">
+            Edit Invoice
+            <span v-if="saveStatus" :class="['save-status', saveStatus]">
+              {{ saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : 'Error' }}
+            </span>
+          </div>
+
+          <!-- Invoicer Selection -->
           <div class="selector-row">
             <div class="selector-group">
-              <label>Change Invoicer</label>
+              <label>Invoicer</label>
               <select @change="onInvoicerChanged" :value="selectedInvoicerId">
                 <option value="">-- Select Invoicer --</option>
                 <option v-for="invoicer in invoicers" :key="invoicer.id" :value="invoicer.id">
                   {{ invoicer.name }}
                 </option>
               </select>
+            </div>
+          </div>
+
+          <!-- Invoice Details Section -->
+          <div class="editor-section">
+            <div class="editor-section-title">Invoice Details</div>
+            <div class="editor-row">
+              <div class="editor-field small">
+                <label>Number</label>
+                <input type="number" :value="invoice.Number" @input="updateInvoiceNumber('Number', $event)">
+              </div>
+              <div class="editor-field small">
+                <label>Issued</label>
+                <input type="date" :value="formatDateForInput(invoice.Issued)" @input="updateInvoiceDate('Issued', $event)">
+              </div>
+              <div class="editor-field small">
+                <label>Due</label>
+                <input type="date" :value="formatDateForInput(invoice.Due)" @input="updateInvoiceDate('Due', $event)">
+              </div>
+              <div class="editor-field small">
+                <label>Quote Date</label>
+                <input type="date" :value="formatDateForInput(invoice.Quote_Date)" @input="updateInvoiceDate('Quote_Date', $event)">
+              </div>
+              <div class="editor-field small">
+                <label>Total</label>
+                <input type="number" :value="invoice.Total" @input="updateInvoiceNumber('Total', $event)">
+              </div>
+              <div class="editor-field checkbox">
+                <input type="checkbox" :checked="invoice.Invoice" @change="updateInvoiceCheckbox('Invoice', $event)">
+                <label>Is Invoice</label>
+              </div>
+              <div class="editor-field checkbox">
+                <input type="checkbox" :checked="invoice.Paid" @change="updateInvoiceCheckbox('Paid', $event)">
+                <label>Paid</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes Section -->
+          <div class="editor-section">
+            <div class="editor-section-title">Notes</div>
+            <div class="editor-row">
+              <div class="editor-field wide">
+                <label>Quote Note</label>
+                <textarea :value="invoice.QuoteNote" @input="updateInvoiceText('QuoteNote', $event)"></textarea>
+              </div>
+              <div class="editor-field wide">
+                <label>Invoice Note</label>
+                <textarea :value="invoice.InvoiceNote" @input="updateInvoiceText('InvoiceNote', $event)"></textarea>
+              </div>
+            </div>
+            <div class="editor-row">
+              <div class="editor-field wide">
+                <label>Final Quote Text</label>
+                <textarea :value="invoice.FinalQuoteText" @input="updateInvoiceText('FinalQuoteText', $event)"></textarea>
+              </div>
+              <div class="editor-field wide">
+                <label>Final Invoice Text</label>
+                <textarea :value="invoice.FinalInvoiceText" @input="updateInvoiceText('FinalInvoiceText', $event)"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tree Items Section -->
+          <div class="editor-section" v-if="invoice.Items && invoice.Items.length > 0">
+            <div class="editor-section-title">Line Items (Trees)</div>
+            <div v-for="(item, index) in invoice.Items" :key="item.id" class="tree-item-editor">
+              <div class="tree-item-header">
+                <span class="tree-item-number">Item {{ index + 1 }}</span>
+                <span v-if="treeSaveStatus[item.id]" :class="['save-status', treeSaveStatus[item.id]]">
+                  {{ treeSaveStatus[item.id] === 'saving' ? 'Saving...' : treeSaveStatus[item.id] === 'saved' ? 'Saved' : 'Error' }}
+                </span>
+              </div>
+              <div class="editor-row">
+                <div class="editor-field wide">
+                  <label>Description</label>
+                  <textarea :value="item.Description" @input="updateTreeText(item.id, 'Description', $event)"></textarea>
+                </div>
+              </div>
+              <div class="editor-row">
+                <div class="editor-field small">
+                  <label>Price</label>
+                  <input type="number" :value="item.Price" @input="updateTreeNumber(item.id, 'Price', $event)">
+                </div>
+                <div class="editor-field small">
+                  <label>Quantity</label>
+                  <input type="number" :value="item.Quantity" @input="updateTreeNumber(item.id, 'Quantity', $event)">
+                </div>
+                <div class="editor-field small">
+                  <label>Total</label>
+                  <input type="number" :value="item.Total" @input="updateTreeNumber(item.id, 'Total', $event)">
+                </div>
+              </div>
             </div>
           </div>
         </div>
