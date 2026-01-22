@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.26 (Direct API)</title>
+    <title>Tree Invoice Alt v1.27 (Direct API)</title>
 
     <style>
       body {
@@ -1881,6 +1881,8 @@
           <div style="margin-top: 2em;">
             <div class="note-label">Final {{ invoice.Invoice ? 'Invoice' : 'Quote' }} Text:</div>
             <textarea class="edit-textarea" :value="invoice.Invoice ? invoice.FinalInvoiceText : invoice.FinalQuoteText" @input="updateInvoiceText(invoice.Invoice ? 'FinalInvoiceText' : 'FinalQuoteText', $event); autoResize($event)" @focus="autoResize($event)" placeholder="Closing text..."></textarea>
+            <span v-if="invoice.Invoicer && typeof invoice.Invoicer === 'object'" style="color: #666; font-style: italic;"> {{ invoice.Invoicer.Name }}.</span>
+            <div v-if="invoice.Invoicer && typeof invoice.Invoicer === 'object'" class="note-label" style="margin-top: 0.25em; font-size: 0.7em;">(Invoicer name auto-appended)</div>
             <p style="margin-top: 1em;">Gratefully,</p>
             <br/>
             <p v-if="invoice.Invoicer && typeof invoice.Invoicer === 'object'">
