@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.10 (Direct API)</title>
+    <title>Tree Invoice Alt v1.11 (Direct API)</title>
 
     <style>
       body {
@@ -768,64 +768,47 @@
       }
     }
 
-    // Populate the invoicer selector with Name-First format
+    // Populate the invoicer selector with Name-First format (all invoicers)
     function populateInvoicerSelector() {
       if (!tableCache.Invoicer) return;
 
-      // Get invoicers who have at least one invoice
-      const invoicerIdsWithInvoices = new Set(
-        tableCache.Invoices2.map(inv => inv.Invoicer).filter(Boolean)
-      );
-
-      // Filter and sort invoicers
-      const invoicersWithInvoices = tableCache.Invoicer
-        .filter(i => invoicerIdsWithInvoices.has(i.id))
+      // Show all invoicers, sorted by name
+      const allInvoicers = tableCache.Invoicer
         .map(i => ({
           id: i.id,
           name: [i.Name, i.First].filter(Boolean).join('-') || `Invoicer #${i.id}`
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
-      data.invoicers = invoicersWithInvoices;
+      data.invoicers = allInvoicers;
     }
 
-    // Update client list when invoicer is selected
-    function onInvoicerSelected(invoicerId) {
-      data.selectedInvoicerId = invoicerId;
-      data.selectedClientId = null;
-      data.selectedInvoiceId = null;
-      data.invoice = '';
-      data.clients = [];
-      data.invoicesForClient = [];
+    // Populate client selector with clients who have invoices
+    function populateClientSelector() {
+      if (!tableCache.Clients) return;
 
-      if (!invoicerId) {
-        return;
-      }
-
-      // Get clients who have invoices with this invoicer
-      const clientIdsForInvoicer = new Set(
-        tableCache.Invoices2
-          .filter(inv => inv.Invoicer === invoicerId)
-          .map(inv => inv.Client)
-          .filter(Boolean)
+      // Get clients who have at least one invoice
+      const clientIdsWithInvoices = new Set(
+        tableCache.Invoices2.map(inv => inv.Client).filter(Boolean)
       );
 
       // Filter and sort clients
-      const clientsForInvoicer = tableCache.Clients
-        .filter(c => clientIdsForInvoicer.has(c.id))
+      const clientsWithInvoices = tableCache.Clients
+        .filter(c => clientIdsWithInvoices.has(c.id))
         .map(c => ({
           id: c.id,
           name: [c.First, c.Last].filter(Boolean).join(' ') || `Client #${c.id}`
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
-      data.clients = clientsForInvoicer;
+      data.clients = clientsWithInvoices;
     }
 
     // Update invoice list when client is selected
     function onClientSelected(clientId) {
       data.selectedClientId = clientId;
       data.selectedInvoiceId = null;
+      data.selectedInvoicerId = null;
       data.invoice = '';
       data.invoicesForClient = [];
 
@@ -833,9 +816,9 @@
         return;
       }
 
-      // Filter invoices for this client AND invoicer, sorted by number descending
+      // Filter invoices for this client, sorted by number descending
       const invoices = tableCache.Invoices2
-        .filter(inv => inv.Client === clientId && inv.Invoicer === data.selectedInvoicerId)
+        .filter(inv => inv.Client === clientId)
         .map(inv => ({
           id: inv.id,
           number: inv.Number,
@@ -847,9 +830,50 @@
       data.invoicesForClient = invoices;
     }
 
+    // Update the invoicer on the current invoice in Grist
+    async function onInvoicerChanged(invoicerId) {
+      if (!data.invoice || !data.invoice.id) {
+        console.warn('No invoice selected to update');
+        return;
+      }
+
+      data.selectedInvoicerId = invoicerId;
+
+      if (!invoicerId) {
+        return;
+      }
+
+      try {
+        data.status = 'Updating invoicer...';
+
+        // Update the invoice record in Grist
+        await grist.docApi.applyUserActions([
+          ['UpdateRecord', 'Invoices2', data.invoice.id, { Invoicer: invoicerId }]
+        ]);
+
+        // Update local cache
+        const cachedInvoice = findById(tableCache.Invoices2, data.invoice.id);
+        if (cachedInvoice) {
+          cachedInvoice.Invoicer = invoicerId;
+        }
+
+        // Rebuild the invoice display with new invoicer
+        const invoice = buildInvoiceFromRow(data.invoice.id);
+        data.invoice = invoice;
+        window.invoice = invoice;
+
+        data.status = '';
+        console.log('Invoicer updated to:', invoicerId);
+      } catch (err) {
+        console.error('Failed to update invoicer:', err);
+        data.status = 'Failed to update invoicer: ' + err.message;
+      }
+    }
+
     // Load invoice when selected from dropdown
     function onInvoiceSelected(invoiceId) {
       data.selectedInvoiceId = invoiceId;
+      data.selectedInvoicerId = null;
 
       if (!invoiceId) {
         data.invoice = '';
@@ -861,6 +885,11 @@
         data.invoice = invoice;
         data.status = '';
         window.invoice = invoice;
+
+        // Set the invoicer selector to the invoice's current invoicer
+        if (invoice.Invoicer && invoice.Invoicer.id) {
+          data.selectedInvoicerId = invoice.Invoicer.id;
+        }
       } catch (err) {
         handleError(err);
       }
@@ -875,20 +904,22 @@
         data.tablesLoaded = true;
 
         // Populate selectors
+        populateClientSelector();
         populateInvoicerSelector();
 
         // Rebuild current invoice if we have one
         if (data.invoice && data.invoice.id) {
           const invoice = buildInvoiceFromRow(data.invoice.id);
           data.invoice = invoice;
+          // Restore invoicer selection
+          if (invoice.Invoicer && invoice.Invoicer.id) {
+            data.selectedInvoicerId = invoice.Invoicer.id;
+          }
         }
 
-        // Re-filter if selections were made
-        if (data.selectedInvoicerId) {
-          onInvoicerSelected(data.selectedInvoicerId);
-          if (data.selectedClientId) {
-            onClientSelected(data.selectedClientId);
-          }
+        // Re-filter invoices if client was selected
+        if (data.selectedClientId) {
+          onClientSelected(data.selectedClientId);
         }
 
         data.status = '';
@@ -903,6 +934,7 @@
         data.status = 'Loading tables...';
         await fetchAllTables();
         data.tablesLoaded = true;
+        populateClientSelector();
         populateInvoicerSelector();
         data.status = '';
       } catch (err) {
@@ -938,14 +970,14 @@
         el: '#app',
         data: data,
         methods: {
-          onInvoicerSelected: function(event) {
-            onInvoicerSelected(event.target.value ? parseInt(event.target.value) : null);
-          },
           onClientSelected: function(event) {
             onClientSelected(event.target.value ? parseInt(event.target.value) : null);
           },
           onInvoiceSelected: function(event) {
             onInvoiceSelected(event.target.value ? parseInt(event.target.value) : null);
+          },
+          onInvoicerChanged: function(event) {
+            onInvoicerChanged(event.target.value ? parseInt(event.target.value) : null);
           }
         }
       });
@@ -958,17 +990,8 @@
       <div class="selector-panel">
         <div class="selector-row">
           <div class="selector-group">
-            <label>Invoicer</label>
-            <select @change="onInvoicerSelected" :value="selectedInvoicerId">
-              <option value="">-- Select Invoicer --</option>
-              <option v-for="invoicer in invoicers" :key="invoicer.id" :value="invoicer.id">
-                {{ invoicer.name }}
-              </option>
-            </select>
-          </div>
-          <div class="selector-group">
             <label>Client</label>
-            <select @change="onClientSelected" :value="selectedClientId" :disabled="!selectedInvoicerId">
+            <select @change="onClientSelected" :value="selectedClientId">
               <option value="">-- Select Client --</option>
               <option v-for="client in clients" :key="client.id" :value="client.id">
                 {{ client.name }}
@@ -981,6 +1004,15 @@
               <option value="">-- Select Invoice --</option>
               <option v-for="inv in invoicesForClient" :key="inv.id" :value="inv.id">
                 {{ inv.label }}
+              </option>
+            </select>
+          </div>
+          <div class="selector-group">
+            <label>Change Invoicer</label>
+            <select @change="onInvoicerChanged" :value="selectedInvoicerId" :disabled="!selectedInvoiceId">
+              <option value="">-- Select Invoicer --</option>
+              <option v-for="invoicer in invoicers" :key="invoicer.id" :value="invoicer.id">
+                {{ invoicer.name }}
               </option>
             </select>
           </div>
