@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.20 (Direct API)</title>
+    <title>Tree Invoice Alt v1.21 (Direct API)</title>
 
     <style>
       body {
@@ -527,8 +527,10 @@
 
       .editable-invoice .edit-textarea {
         width: 100%;
-        min-height: 3em;
-        resize: vertical;
+        min-height: 1.5em;
+        resize: none;
+        overflow: hidden;
+        line-height: 1.4;
       }
 
       .editable-invoice .edit-input.short {
@@ -1627,6 +1629,19 @@
             const date = new Date(timestamp * 1000);
             if (isNaN(date.getTime())) return '';
             return date.toISOString().split('T')[0];
+          },
+          // Auto-resize textarea to fit content
+          autoResize: function(event) {
+            const el = event.target;
+            el.style.height = 'auto';
+            el.style.height = el.scrollHeight + 'px';
+          },
+          // Calculate total from items
+          calculateTotal: function() {
+            if (!this.invoice || !this.invoice.Items || !Array.isArray(this.invoice.Items)) {
+              return 0;
+            }
+            return this.invoice.Items.reduce((sum, item) => sum + (Number(item.Total) || 0), 0);
           }
         }
       });
@@ -1786,7 +1801,7 @@
             </p>
             <div style="margin-top: 1em;">
               <div class="note-label">{{ invoice.Invoice ? 'Invoice' : 'Quote' }} Note:</div>
-              <textarea class="edit-textarea" :value="invoice.Invoice ? invoice.InvoiceNote : invoice.QuoteNote" @input="updateInvoiceText(invoice.Invoice ? 'InvoiceNote' : 'QuoteNote', $event)" placeholder="Add a note..."></textarea>
+              <textarea class="edit-textarea" :value="invoice.Invoice ? invoice.InvoiceNote : invoice.QuoteNote" @input="updateInvoiceText(invoice.Invoice ? 'InvoiceNote' : 'QuoteNote', $event); autoResize($event)" @focus="autoResize($event)" placeholder="Add a note..."></textarea>
             </div>
           </div>
 
@@ -1798,19 +1813,19 @@
             </tr>
             <tr v-for="(item, index) in invoice.Items" :key="item.id">
               <td>
-                <textarea class="edit-textarea" :value="item.Description" @input="updateTreeText(item.id, 'Description', $event)" placeholder="Item description..."></textarea>
+                <textarea class="edit-textarea" :value="item.Description" @input="updateTreeText(item.id, 'Description', $event); autoResize($event)" @focus="autoResize($event)" placeholder="Item description..."></textarea>
                 <span v-if="treeSaveStatus[item.id]" :class="['save-status', treeSaveStatus[item.id]]" style="font-size: 0.75em;">
                   {{ treeSaveStatus[item.id] === 'saving' ? 'Saving...' : treeSaveStatus[item.id] === 'saved' ? '✓' : '!' }}
                 </span>
               </td>
               <td class="money">
-                <input type="number" class="edit-input number" :value="item.Total" @input="updateTreeNumber(item.id, 'Total', $event)">
+                <input type="number" class="edit-input number" :value="item.Price" @input="updateTreeNumber(item.id, 'Price', $event)">
               </td>
             </tr>
             <tr class="total-row">
               <td class="total-label">Total</td>
               <td class="money">
-                <input type="number" class="edit-input number" :value="invoice.Total" @input="updateInvoiceNumber('Total', $event)" style="font-weight: bold;">
+                <strong>${{ calculateTotal().toLocaleString('en-US') }}</strong>
               </td>
             </tr>
           </table>
@@ -1819,7 +1834,7 @@
           <!-- Final Text -->
           <div style="margin-top: 2em;">
             <div class="note-label">Final {{ invoice.Invoice ? 'Invoice' : 'Quote' }} Text:</div>
-            <textarea class="edit-textarea" :value="invoice.Invoice ? invoice.FinalInvoiceText : invoice.FinalQuoteText" @input="updateInvoiceText(invoice.Invoice ? 'FinalInvoiceText' : 'FinalQuoteText', $event)" placeholder="Closing text..."></textarea>
+            <textarea class="edit-textarea" :value="invoice.Invoice ? invoice.FinalInvoiceText : invoice.FinalQuoteText" @input="updateInvoiceText(invoice.Invoice ? 'FinalInvoiceText' : 'FinalQuoteText', $event); autoResize($event)" @focus="autoResize($event)" placeholder="Closing text..."></textarea>
             <p style="margin-top: 1em;">Gratefully,</p>
             <br/>
             <p v-if="invoice.Invoicer && typeof invoice.Invoicer === 'object'">
