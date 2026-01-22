@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.12 (Direct API)</title>
+    <title>Tree Invoice Alt v1.13 (Direct API)</title>
 
     <style>
       body {
@@ -213,7 +213,7 @@
         }
 
         div.print,
-        .selector-panel {
+        .control-panels {
           display: none !important;
         }
       }
@@ -245,23 +245,53 @@
         box-shadow: 0 2px 10px rgba(0,0,0,0.2);
       }
 
-      /* Selector panel - won't print */
-      .selector-panel {
-        background: #333;
-        color: white;
-        padding: 1em;
-        margin-bottom: 1em;
-        border-radius: 4px;
+      /* Control panels - won't print */
+      .control-panels {
+        max-width: 7.5in;
+        margin: 0 auto 1em auto;
       }
 
-      .selector-panel label {
+      .selector-panel,
+      .editor-panel {
+        color: white;
+        padding: 1em;
+        border-radius: 4px;
+        margin-bottom: 0.5em;
+      }
+
+      .selector-panel {
+        background: #333;
+      }
+
+      .editor-panel {
+        background: #1a5a1a;
+      }
+
+      .panel-title {
+        font-size: 0.8em;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 0.75em;
+        color: #aaa;
+        border-bottom: 1px solid #555;
+        padding-bottom: 0.5em;
+      }
+
+      .editor-panel .panel-title {
+        color: #8f8;
+        border-bottom-color: #3a7a3a;
+      }
+
+      .selector-panel label,
+      .editor-panel label {
         display: block;
         margin-bottom: 0.25em;
         font-size: 0.9em;
         color: #ccc;
       }
 
-      .selector-panel select {
+      .selector-panel select,
+      .editor-panel select {
         padding: 0.5em;
         font-size: 1em;
         min-width: 200px;
@@ -1006,38 +1036,50 @@
   </head>
   <body>
     <div id="app">
-      <!-- Selector Panel - won't print -->
-      <div class="selector-panel">
-        <div class="selector-row">
-          <div class="selector-group">
-            <label>Client</label>
-            <select @change="onClientSelected" :value="selectedClientId">
-              <option value="">-- Select Client --</option>
-              <option v-for="client in clients" :key="client.id" :value="client.id">
-                {{ client.name }}
-              </option>
-            </select>
-          </div>
-          <div class="selector-group">
-            <label>Invoice/Quote</label>
-            <select @change="onInvoiceSelected" :value="selectedInvoiceId" :disabled="!selectedClientId">
-              <option value="">-- Select Invoice --</option>
-              <option v-for="inv in invoicesForClient" :key="inv.id" :value="inv.id">
-                {{ inv.label }}
-              </option>
-            </select>
-          </div>
-          <div class="selector-group">
-            <label>Change Invoicer</label>
-            <select @change="onInvoicerChanged" :value="selectedInvoicerId" :disabled="!selectedInvoiceId">
-              <option value="">-- Select Invoicer --</option>
-              <option v-for="invoicer in invoicers" :key="invoicer.id" :value="invoicer.id">
-                {{ invoicer.name }}
-              </option>
-            </select>
+      <!-- Control Panels - won't print -->
+      <div class="control-panels">
+        <!-- Selector Panel -->
+        <div class="selector-panel">
+          <div class="panel-title">Select Invoice</div>
+          <div class="selector-row">
+            <div class="selector-group">
+              <label>Client</label>
+              <select @change="onClientSelected" :value="selectedClientId">
+                <option value="">-- Select Client --</option>
+                <option v-for="client in clients" :key="client.id" :value="client.id">
+                  {{ client.name }}
+                </option>
+              </select>
+            </div>
+            <div class="selector-group">
+              <label>Invoice/Quote</label>
+              <select @change="onInvoiceSelected" :value="selectedInvoiceId" :disabled="!selectedClientId">
+                <option value="">-- Select Invoice --</option>
+                <option v-for="inv in invoicesForClient" :key="inv.id" :value="inv.id">
+                  {{ inv.label }}
+                </option>
+              </select>
+            </div>
           </div>
         </div>
-        <div v-if="status && status !== 'waiting'" style="margin-top: 0.5em; color: #f99;">
+
+        <!-- Editor Panel -->
+        <div class="editor-panel" v-if="selectedInvoiceId">
+          <div class="panel-title">Edit Invoice</div>
+          <div class="selector-row">
+            <div class="selector-group">
+              <label>Change Invoicer</label>
+              <select @change="onInvoicerChanged" :value="selectedInvoicerId">
+                <option value="">-- Select Invoicer --</option>
+                <option v-for="invoicer in invoicers" :key="invoicer.id" :value="invoicer.id">
+                  {{ invoicer.name }}
+                </option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="status && status !== 'waiting'" style="padding: 0.5em; color: #f99;">
           {{ status }}
         </div>
       </div>
