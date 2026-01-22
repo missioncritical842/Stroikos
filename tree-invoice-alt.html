@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Tree Invoice Alt v1.9 (Direct API)</title>
+
+    <style>
+      body {
+        font-family: Sans-Serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 5px;
+      }
+
+      .logo {
+        max-width: 100px;
+      }
+
+      .letterhead {
+        display: flex;
+        align-items: center;
+        margin-bottom: 2em;
+        justify-content: space-between;
+      }
+
+      .letterhead .logo {
+        margin-right: 1em;
+        font-size: 12pt;
+        margin-top: 0.5em;
+      }
+
+      .letterhead-text {
+        flex-grow: 1;
+        text-align: center;
+      }
+
+      .company-name {
+        font-family: sans-serif;
+        font-weight: bold;
+        font-size: 18pt;
+        letter-spacing: 0.05em;
+      }
+
+      .company-details {
+        font-family: sans-serif;
+        font-weight: 300;
+        font-size: 12pt;
+        margin-top: 0.5em;
+      }
+
+      .invoice-meta {
+        /* margin-top: 2em; */ /* Removed to fix alignment */
+      }
+
+      .address-title {
+        font-weight: bold;
+        font-size: 1.1em;
+        margin-bottom: 0;
+        text-transform: uppercase;
+      }
+
+      .meta {
+        color: #666;
+      }
+
+      .header .title {
+        font-size: 300%;
+        font-weight: bold;
+      }
+
+      .header .meta {
+        text-transform: uppercase;
+      }
+
+      .info .meta {
+        text-transform: uppercase;
+      }
+
+      .info .meta::after {
+        content: " :";
+      }
+
+      .supplier {
+        color: #333;
+        display: block;
+      }
+
+      .block {
+        padding-left: 5px;
+        display: block;
+      }
+
+      .client, .items {
+        padding: 1px;
+        margin-top: 1em;
+        margin-bottom: 1em;
+        background: #ccc;
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+
+      .client .title {
+        margin-left: 4px;
+        color: white;
+        text-transform: uppercase;
+      }
+
+      .client .details {
+        padding: 4px;
+        background-color: var(--grist-theme-page-panels-main-panel-bg, white);
+      }
+
+      table.items {
+        width: 100%;
+        border: 1px solid #ccc;
+        border-collapse: collapse;
+      }
+
+      table.items th {
+        text-align: left;
+        color: black;
+        text-transform: uppercase;
+        font-weight: normal;
+        padding: 4px;
+      }
+
+      table.items td {
+        background-color: var(--grist-theme-page-panels-main-panel-bg, white);
+        padding: 4px;
+        border: 1px solid #eee;
+      }
+
+      .client .title, table.items th, .help .title {
+        padding-top: 10px;
+        padding-bottom: 10px;
+      }
+
+      .money, .number {
+        text-align: right;
+        width: 15%;
+        color: #333;
+      }
+
+      .name {
+        color: #333;
+      }
+
+      .address {
+        padding-bottom: 1em;
+      }
+
+      div.date-tag {
+        display: inline-block;
+        min-width: 80px;
+      }
+
+      div.top {
+        display: flex;
+        width: 100%;
+        padding: 0px;
+        justify-content: space-between;
+      }
+
+      div.instructions, .newlined, p.note {
+        white-space: pre-line;
+      }
+
+      div.paid {
+        position: relative;
+        left: 40%;
+        color: red;
+        rotate: 15deg;
+        font-size: 80px;
+        top: 20px;
+        border: 5px solid red;
+        float: left;
+        font-weight: bolder;
+      }
+
+      .app {
+        position: relative;
+      }
+
+      /* Print styles for letter size paper */
+      @media print {
+        @page {
+          size: letter;
+          margin: 0.75in;
+        }
+
+        body {
+          background: #f5f5f5 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+
+        .invoice-content {
+          background: white !important;
+          padding: 0.5in;
+          box-shadow: none;
+        }
+
+        div.print,
+        .selector-panel {
+          display: none !important;
+        }
+      }
+
+      /* Screen styles for grey background preview */
+      body {
+        background: #e0e0e0;
+      }
+
+      .invoice-content {
+        background: white;
+        padding: 0.5in;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-top: 1em;
+      }
+
+      /* Selector panel - won't print */
+      .selector-panel {
+        background: #333;
+        color: white;
+        padding: 1em;
+        margin-bottom: 1em;
+        border-radius: 4px;
+      }
+
+      .selector-panel label {
+        display: block;
+        margin-bottom: 0.25em;
+        font-size: 0.9em;
+        color: #ccc;
+      }
+
+      .selector-panel select {
+        padding: 0.5em;
+        font-size: 1em;
+        min-width: 200px;
+        margin-right: 1em;
+        margin-bottom: 0.5em;
+        border: none;
+        border-radius: 4px;
+      }
+
+      .selector-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1em;
+        align-items: flex-end;
+      }
+
+      .selector-group {
+        display: flex;
+        flex-direction: column;
+      }
+
+      div.print {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+      }
+
+      div.print a {
+        background: #C83200;
+        display: block;
+        font-size: 200%;
+        color: white;
+        text-decoration: none;
+        padding: 0.25em;
+        padding-top: 0.5em;
+        padding-right: 0.5em;
+        border-top-right-radius: 0.5em;
+        text-transform: uppercase;
+      }
+
+      div.print a:hover {
+        background: #666;
+      }
+
+      .done {
+        text-decoration: line-through;
+      }
+
+      div.column-name {
+        display: inline-block;
+      }
+
+      .column-name {
+        background: #666;
+        color: white;
+        margin: 2px;
+        padding: 2px;
+        border-radius: 2px;
+        font-style: normal;
+      }
+
+      .column-recognized {
+        background: green;
+      }
+
+      .column-expected {
+        background: #666;
+      }
+
+      .column-ignored {
+        background: red;
+      }
+
+      .help {
+        padding: 1px;
+        margin-top: 1em;
+        margin-bottom: 1em;
+        background: black;
+        color: white;
+      }
+
+      .help .details {
+        padding: 4px;
+      }
+
+      .help table {
+        border: none;
+      }
+
+      .help td.key {
+        text-align: right;
+      }
+
+      .help table {
+        padding-bottom: 3px;
+      }
+
+      .help-close {
+        display: float;
+        float: right;
+        max-width: 150px;
+        padding: 5px;
+        border-left: 1px solid white;
+        border-bottom-left-radius: 5px;
+        font-size: 80%;
+        font-style: italic;
+      }
+
+      .help pre {
+        display: inline-block;
+        background: #ddd;
+        color: #000;
+        padding: 0.25em;
+        margin-left: 1em;
+      }
+
+      .help .title {
+        margin-left: 4px;
+        text-transform: uppercase;
+      }
+
+      .status {
+        padding: 4px;
+      }
+
+      .status .button {
+        display: inline-block;
+        text-decoration: none;
+        color: #333;
+        background: #ddd;
+        padding-left: 0.5em;
+        padding-right: 0.5em;
+        padding-top: 1px;
+        padding-bottom: 1px;
+        margin-top: 1px;
+        margin-bottom: 1px;
+        border-radius: 0.25em;
+      }
+
+      table.items .total-row td {
+        font-weight: bold;
+        border-top: 2px solid #333;
+      }
+
+      .total-label {
+        text-align: right;
+        padding-right: 1em;
+      }
+
+      .currency-cell {
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .money span {
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .currency-symbol {
+        margin-left: 4em;
+      }
+
+      .stump-man-header {
+        font-family: sans-serif;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 24pt;
+      }
+
+      .stump-man-container {
+        position: relative;
+        text-align: center;
+        margin-bottom: 2em;
+        height: 90px;
+      }
+
+      .stump-man-logo {
+        max-height: 90px;
+        position: absolute;
+        right: 0;
+        top: 0;
+      }
+
+      .footer-container {
+        margin-top: 4em;
+        position: relative;
+        height: 60px;
+      }
+
+      .footer-email {
+        text-align: center;
+      }
+
+      .footer-logo {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        max-height: 50px;
+        max-width: 150px;
+      }
+    </style>
+
+    <!-- A template for showing an invoice in a Custom Widget in Grist. -->
+    <!-- Uses Vue.js, moment, and the Grist Plugin API -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.3/vue.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/moment.min.js"></script>
+    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+
+    <script>
+    // ===========================================
+    // Tree Invoice Alt - Direct API Fetching
+    // ===========================================
+    // This version fetches data directly from multiple Grist tables
+    // instead of relying on a References column with expanded refs.
+    //
+    // Tables used:
+    //   - Invoices2: Main invoice/quote records
+    //   - Clients: Customer information
+    //   - Invoicer: Business entity info
+    //   - Trees: Line items (filtered by Trees.Invoice = invoice.id)
+    // ===========================================
+
+    function ready(fn) {
+      if (document.readyState !== 'loading'){
+        fn();
+      } else {
+        document.addEventListener('DOMContentLoaded', fn);
+      }
+    }
+
+    // Cache for fetched tables
+    const tableCache = {
+      Clients: null,
+      Invoicer: null,
+      Invoices2: null,
+      Trees: null
+    };
+
+    // Parse Grist's encoded list format: ["L", ["O", {...}], ["O", {...}]]
+    function parseGristList(value) {
+      if (!value) return [];
+      if (Array.isArray(value)) {
+        if (value[0] === 'L') {
+          // Grist list format: ["L", item1, item2, ...]
+          return value.slice(1).map(item => parseGristValue(item));
+        }
+        // Already a plain array
+        return value;
+      }
+      return [];
+    }
+
+    // Parse Grist's encoded object format: ["O", {...}]
+    function parseGristValue(value) {
+      if (!value) return value;
+      if (Array.isArray(value)) {
+        if (value[0] === 'O' && value.length === 2) {
+          // Grist object format: ["O", {actual object}]
+          return value[1];
+        }
+        if (value[0] === 'L') {
+          return parseGristList(value);
+        }
+        if (value[0] === 'd' && value.length === 2) {
+          // Grist date format: ["d", timestamp]
+          return value[1];
+        }
+      }
+      return value;
+    }
+
+    // Convert Grist columnar table format to array of row objects
+    function tableToRows(table) {
+      if (!table || !table.id) return [];
+      const rows = [];
+      const columns = Object.keys(table);
+      const numRows = table.id.length;
+
+      for (let i = 0; i < numRows; i++) {
+        const row = {};
+        for (const col of columns) {
+          row[col] = table[col][i];
+        }
+        rows.push(row);
+      }
+      return rows;
+    }
+
+    // Find a record by ID in a rows array
+    function findById(rows, id) {
+      return rows.find(r => r.id === id) || null;
+    }
+
+    // Fetch all required tables from Grist API
+    async function fetchAllTables() {
+      try {
+        const [clientsTable, invoicerTable, invoicesTable, treesTable] = await Promise.all([
+          grist.docApi.fetchTable('Clients'),
+          grist.docApi.fetchTable('Invoicer'),
+          grist.docApi.fetchTable('Invoices2'),
+          grist.docApi.fetchTable('Trees')
+        ]);
+
+        tableCache.Clients = tableToRows(clientsTable);
+        tableCache.Invoicer = tableToRows(invoicerTable);
+        tableCache.Invoices2 = tableToRows(invoicesTable);
+        tableCache.Trees = tableToRows(treesTable);
+
+        console.log('Tables fetched:', {
+          Clients: tableCache.Clients.length,
+          Invoicer: tableCache.Invoicer.length,
+          Invoices2: tableCache.Invoices2.length,
+          Trees: tableCache.Trees.length
+        });
+
+        return true;
+      } catch (err) {
+        console.error('Error fetching tables:', err);
+        throw new Error('Failed to fetch tables: ' + err.message);
+      }
+    }
+
+    // Get all tree items for a specific invoice
+    function getTreesForInvoice(invoiceId) {
+      if (!tableCache.Trees) return [];
+      return tableCache.Trees.filter(tree => tree.Invoice === invoiceId);
+    }
+
+    // Build complete invoice object from raw row and cached tables
+    function buildInvoiceFromRow(row) {
+      // Get the invoice row from cache if we only have an ID
+      let invoiceRow = row;
+      if (typeof row === 'number') {
+        invoiceRow = findById(tableCache.Invoices2, row);
+        if (!invoiceRow) {
+          throw new Error('Invoice not found with ID: ' + row);
+        }
+      }
+
+      // Look up Client by reference ID
+      const clientId = invoiceRow.Client;
+      const clientRow = clientId ? findById(tableCache.Clients, clientId) : null;
+
+      // Look up Invoicer by reference ID
+      const invoicerId = invoiceRow.Invoicer;
+      const invoicerRow = invoicerId ? findById(tableCache.Invoicer, invoicerId) : null;
+
+      // Get items directly from Trees table (filtered by invoice ID)
+      const items = getTreesForInvoice(invoiceRow.id);
+
+      // Build the complete invoice object
+      const invoice = {
+        id: invoiceRow.id,
+        Number: invoiceRow.Number,
+        Issued: invoiceRow.Issued,
+        Due: invoiceRow.Due,
+        Quote_Date: invoiceRow.Quote_Date,
+        QuoteNote: invoiceRow.QuoteNote,
+        InvoiceNote: invoiceRow.InvoiceNote,
+        FinalQuoteText: invoiceRow.FinalQuoteText,
+        FinalInvoiceText: invoiceRow.FinalInvoiceText,
+        Invoice: invoiceRow.Invoice,
+        Total: invoiceRow.Total,
+        Paid: invoiceRow.Paid,
+
+        // Nested Client object
+        Client: clientRow ? {
+          id: clientRow.id,
+          First: clientRow.First,
+          Last: clientRow.Last,
+          Street1: clientRow.Street1,
+          Street2: clientRow.Street2,
+          City: clientRow.City,
+          State: clientRow.State,
+          Zip: clientRow.Zip,
+          Email: clientRow.Email,
+          Phone: clientRow.Phone
+        } : null,
+
+        // Nested Invoicer object
+        Invoicer: invoicerRow ? {
+          id: invoicerRow.id,
+          Name: invoicerRow.Name,
+          First: invoicerRow.First,
+          Last: invoicerRow.Last,
+          Street1: invoicerRow.Street1,
+          Street2: invoicerRow.Street2,
+          City: invoicerRow.City,
+          State: invoicerRow.State,
+          Zip: invoicerRow.Zip,
+          Email: invoicerRow.Email,
+          Phone: invoicerRow.Phone,
+          Website: invoicerRow.Website
+        } : null,
+
+        // Parsed Items array
+        Items: items
+      };
+
+      // Add Website URL if present
+      if (invoice.Invoicer && invoice.Invoicer.Website) {
+        invoice.Invoicer.Url = tweakUrl(invoice.Invoicer.Website);
+      }
+
+      return invoice;
+    }
+
+    const data = {
+      count: 0,
+      invoice: '',
+      status: 'waiting',
+      tableConnected: false,
+      rowConnected: false,
+      haveRows: false,
+      tablesLoaded: false,
+      // Selector state
+      selectedClientId: null,
+      selectedInvoiceId: null,
+      clients: [],
+      invoicesForClient: []
+    };
+    let app = undefined;
+
+    Vue.filter('currency', formatNumberAsUSD)
+    function formatNumberAsUSD(value) {
+      if (typeof value !== "number") {
+        return value || '—';
+      }
+      value = Math.round(value * 100) / 100;
+      value = (value === -0 ? 0 : value);
+
+      const result = value.toLocaleString('en', {
+        style: 'currency', currency: 'USD'
+      })
+      if (result.includes('NaN')) {
+        return value;
+      }
+      return result;
+    }
+
+    Vue.filter('fallback', function(value, str) {
+      if (!value) {
+        throw new Error("Please provide column " + str);
+      }
+      return value;
+    });
+
+    Vue.filter('asDate', function(value) {
+      if (typeof(value) === 'number') {
+        value = new Date(value * 1000);
+      }
+      const date = moment.utc(value)
+      return date.isValid() ? date.format('MMMM DD, YYYY') : value;
+    });
+
+    function tweakUrl(url) {
+      if (!url) { return url; }
+      if (url.toLowerCase().startsWith('http')) {
+        return url;
+      }
+      return 'https://' + url;
+    };
+
+    function handleError(err) {
+      console.error(err);
+      const target = app || data;
+      target.invoice = '';
+      target.status = String(err).replace(/^Error: /, '');
+      console.log(data);
+    }
+
+    async function updateInvoice(row) {
+      try {
+        data.status = '';
+        if (row === null) {
+          throw new Error("(No data - not on row - please add or select a row)");
+        }
+
+        console.log("Received row:", row);
+
+        // Fetch tables if not already loaded
+        if (!data.tablesLoaded) {
+          data.status = 'Loading tables...';
+          await fetchAllTables();
+          data.tablesLoaded = true;
+        }
+
+        // Build complete invoice from row ID and cached tables
+        const invoice = buildInvoiceFromRow(row.id || row);
+
+        console.log("Built invoice:", invoice);
+
+        // Update Vue data
+        data.invoice = invoice;
+        data.status = '';
+
+        // Make invoice available for debugging
+        window.invoice = invoice;
+      } catch (err) {
+        handleError(err);
+      }
+    }
+
+    // Populate the client selector with sorted client names
+    function populateClientSelector() {
+      if (!tableCache.Clients) return;
+
+      // Get clients who have at least one invoice
+      const clientIdsWithInvoices = new Set(
+        tableCache.Invoices2.map(inv => inv.Client).filter(Boolean)
+      );
+
+      // Filter and sort clients
+      const clientsWithInvoices = tableCache.Clients
+        .filter(c => clientIdsWithInvoices.has(c.id))
+        .map(c => ({
+          id: c.id,
+          name: [c.First, c.Last].filter(Boolean).join(' ') || `Client #${c.id}`
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      data.clients = clientsWithInvoices;
+    }
+
+    // Update invoice list when client is selected
+    function onClientSelected(clientId) {
+      data.selectedClientId = clientId;
+      data.selectedInvoiceId = null;
+      data.invoice = '';
+
+      if (!clientId) {
+        data.invoicesForClient = [];
+        return;
+      }
+
+      // Filter invoices for this client, sorted by number descending
+      const invoices = tableCache.Invoices2
+        .filter(inv => inv.Client === clientId)
+        .map(inv => ({
+          id: inv.id,
+          number: inv.Number,
+          isInvoice: inv.Invoice,
+          label: `${inv.Invoice ? 'Invoice' : 'Quote'} #${inv.Number}`
+        }))
+        .sort((a, b) => b.number - a.number);
+
+      data.invoicesForClient = invoices;
+    }
+
+    // Load invoice when selected from dropdown
+    function onInvoiceSelected(invoiceId) {
+      data.selectedInvoiceId = invoiceId;
+
+      if (!invoiceId) {
+        data.invoice = '';
+        return;
+      }
+
+      try {
+        const invoice = buildInvoiceFromRow(parseInt(invoiceId));
+        data.invoice = invoice;
+        data.status = '';
+        window.invoice = invoice;
+      } catch (err) {
+        handleError(err);
+      }
+    }
+
+    // Refresh tables and rebuild current invoice
+    async function refreshTables() {
+      try {
+        data.status = 'Refreshing tables...';
+        data.tablesLoaded = false;
+        await fetchAllTables();
+        data.tablesLoaded = true;
+
+        // Populate selectors
+        populateClientSelector();
+
+        // Rebuild current invoice if we have one
+        if (data.invoice && data.invoice.id) {
+          const invoice = buildInvoiceFromRow(data.invoice.id);
+          data.invoice = invoice;
+        }
+
+        // Re-filter invoices if client was selected
+        if (data.selectedClientId) {
+          onClientSelected(data.selectedClientId);
+        }
+
+        data.status = '';
+      } catch (err) {
+        handleError(err);
+      }
+    }
+
+    // Initial load of tables and selectors
+    async function initializeTables() {
+      try {
+        data.status = 'Loading tables...';
+        await fetchAllTables();
+        data.tablesLoaded = true;
+        populateClientSelector();
+        data.status = '';
+      } catch (err) {
+        handleError(err);
+      }
+    }
+
+    ready(function() {
+      grist.ready();
+
+      // Initialize tables immediately
+      initializeTables();
+
+      // Listen for any data changes to refresh our cache
+      grist.on('message', msg => {
+        if (msg.tableId) {
+          data.tableConnected = true;
+          data.haveRows = true;
+        }
+
+        // Refresh tables when data changes
+        if (msg.dataChange && data.tablesLoaded) {
+          console.log('Data changed, refreshing tables...');
+          refreshTables();
+        }
+      });
+
+      Vue.config.errorHandler = function (err, vm, info) {
+        handleError(err);
+      };
+
+      app = new Vue({
+        el: '#app',
+        data: data,
+        methods: {
+          onClientSelected: function(event) {
+            onClientSelected(event.target.value ? parseInt(event.target.value) : null);
+          },
+          onInvoiceSelected: function(event) {
+            onInvoiceSelected(event.target.value ? parseInt(event.target.value) : null);
+          }
+        }
+      });
+    });
+    </script>
+  </head>
+  <body>
+    <div id="app">
+      <!-- Selector Panel - won't print -->
+      <div class="selector-panel">
+        <div class="selector-row">
+          <div class="selector-group">
+            <label>Client</label>
+            <select @change="onClientSelected" :value="selectedClientId">
+              <option value="">-- Select Client --</option>
+              <option v-for="client in clients" :key="client.id" :value="client.id">
+                {{ client.name }}
+              </option>
+            </select>
+          </div>
+          <div class="selector-group">
+            <label>Invoice/Quote</label>
+            <select @change="onInvoiceSelected" :value="selectedInvoiceId" :disabled="!selectedClientId">
+              <option value="">-- Select Invoice --</option>
+              <option v-for="inv in invoicesForClient" :key="inv.id" :value="inv.id">
+                {{ inv.label }}
+              </option>
+            </select>
+          </div>
+        </div>
+        <div v-if="status && status !== 'waiting'" style="margin-top: 0.5em; color: #f99;">
+          {{ status }}
+        </div>
+      </div>
+
+      <template v-if="invoice">
+      <div class="invoice-content">
+        <template v-if="invoice.Invoicer && invoice.Invoicer.Name === 'Stroikos Services'">
+          <div class="letterhead">
+            <img class="logo" src="https://stroikos.com/wp-content/uploads/2024/10/Stroikos-services-logo.png" alt="Stroikos Logo">
+            <div class="letterhead-text">
+              <div class="company-name">Stroikos Services — Tree Care</div>
+              <div class="company-details">Arbores amamus</div>
+            </div>
+          </div>
+        </template>
+        <template v-else-if="invoice.Invoicer && invoice.Invoicer.Name === 'A Stump Man'">
+          <div class="stump-man-container">
+            <div class="stump-man-header">A STUMP MAN</div>
+            <img class="stump-man-logo" src="https://stroikos.com/wp-content/uploads/2025/06/A-Stump-Man-Logo.jpg" alt="A Stump Man Logo">
+          </div>
+        </template>
+        <div class="top">
+          <div class="supplier">
+            <div class="address-title">Client</div>
+            <div v-for="business in (invoice.Client ? [invoice.Client] : [])">
+              <template v-if="typeof(business) === 'string'">
+                <div class="address newlined">{{ business }}</div>
+              </template>
+              <template v-else>
+                <div class="address">
+                  <span class="name">{{ business.First }} {{ business.Last }}</span><br />
+                  {{ business.Street1 }}<br />
+                  <template v-if="business.Street2">
+                    {{ business.Street2 }}<br />
+                  </template>
+                  {{ business.City }} {{ business.State }} {{ business.Zip }}<br />
+                  <template v-if="business.Country">
+                    {{ business.Country }}<br />
+                  </template>
+                </div>
+              </template>
+              <div class="invoice-meta">
+                <div v-if="invoice.Invoice ? invoice.Issued : invoice.Quote_Date"><strong>Date:</strong> {{ (invoice.Invoice ? invoice.Issued : invoice.Quote_Date) | asDate }}</div>
+                <div v-if="invoice.Number"><strong>{{ invoice.Invoice ? 'Invoice' : 'Quote' }} #:</strong> {{ invoice.Number }}</div>
+              </div>
+            </div>
+          </div>
+
+          <template v-if="invoice.Invoicer && invoice.Invoicer.Name === 'Stroikos Services'">
+            <div class="supplier">
+              <div class="address-title">From</div>
+              <div v-for="business in (invoice.Invoicer ? [invoice.Invoicer] : [])">
+                <template v-if="typeof(business) === 'string'">
+                  <div class="address newlined">{{ business }}</div>
+                </template>
+                <template v-else>
+                  <div class="address">
+                    <span class="name">{{ business.Name }}</span><br />
+                    {{ business.Street1 }}<br />
+                    <template v-if="business.Street2">
+                      {{ business.Street2 }}<br />
+                    </template>
+                    {{ business.City }} {{ business.State }} {{ business.Zip }}<br />
+                    <template v-if="business.Country">
+                      {{ business.Country }}<br />
+                    </template>
+                  </div>
+                </template>
+                <div class="invoice-meta">
+                  <div v-if="invoice.Invoice && invoice.Due">
+                    <strong>Due Date:</strong> {{ invoice.Due | asDate }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div style="margin: 2em 0;">
+          <p v-if="invoice.Client">
+            Dear {{ typeof invoice.Client === 'object' ? invoice.Client.First : invoice.Client }},
+          </p>
+          <p v-if="invoice.Invoice ? invoice.InvoiceNote : invoice.QuoteNote" class="note" style="margin-top: 1em;">
+            {{ invoice.Invoice ? invoice.InvoiceNote : invoice.QuoteNote }}
+          </p>
+        </div>
+
+        <table class="items">
+          <template v-if="!Array.isArray(invoice.Items)">
+            <tr>
+              <th>Description</th>
+              <th class="money">Price</th>
+            </tr>
+            <tr>
+              <td>{{ invoice.Items }}</td>
+              <td class="money">{{ invoice.Total | currency }}</td>
+            </tr>
+          </template>
+          <template v-else>
+            <tr>
+              <th>Description</th>
+              <th class="money">Price</th>
+            </tr>
+            <tr v-for="(item, index) in invoice.Items">
+              <td>{{ item.Description || [item.Task_Description_Start, [item.Tree_Kind, item.Task_Descriptions].filter(Boolean).join('')].filter(Boolean).join(' ') }}</td>
+              <td class="money">
+                <span>
+                  <span :class="{ 'currency-symbol': index === 0 }">{{ index === 0 ? '$' : '' }}</span>
+                  <span>{{ Math.round(Number(item.Total)).toLocaleString('en-US') }}</span>
+                </span>
+              </td>
+            </tr>
+            <tr class="total-row">
+              <td class="total-label">Total</td>
+              <td class="money">
+                <span>
+                  <span class="currency-symbol">$</span>
+                  <span>{{ Math.round(Number(invoice.Total)).toLocaleString('en-US') }}</span>
+                </span>
+              </td>
+            </tr>
+          </template>
+        </table>
+
+        <div style="margin-top: 2em;">
+          <p v-if="invoice.Invoice ? invoice.FinalInvoiceText : invoice.FinalQuoteText" class="note">
+            <span>{{ invoice.Invoice ? invoice.FinalInvoiceText : invoice.FinalQuoteText }}</span>
+            <span v-if="invoice.Invoicer"> {{ typeof invoice.Invoicer === 'object' ? invoice.Invoicer.Name : invoice.Invoicer }}.</span>
+          </p>
+          <p v-else-if="invoice.Invoicer">Thank you for considering {{ typeof invoice.Invoicer === 'object' ? invoice.Invoicer.Name : invoice.Invoicer }}.</p>
+          <br/>
+          <p style="margin-top: 1em;">Gratefully,</p>
+          <br/><br/>
+          <p v-if="invoice.Invoicer && typeof invoice.Invoicer === 'object'" style="margin-top: 1em; margin-bottom: 0;">
+            {{ invoice.Invoicer.First }} {{ invoice.Invoicer.Last }}
+          </p>
+          <div v-if="invoice.Invoicer && typeof invoice.Invoicer === 'object'">
+            <template v-if="invoice.Invoicer.Email">
+              <div class="email">{{ invoice.Invoicer.Email }}</div>
+            </template>
+            <template v-if="invoice.Invoicer.Phone">
+              <div class="phone">{{ invoice.Invoicer.Phone }}</div>
+            </template>
+            <template v-if="invoice.Invoicer.Website">
+              <div class="website"><a v-bind:href="invoice.Invoicer.Url">{{ invoice.Invoicer.Website }}</a></div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Direct API version - no References column needed -->
+        <template v-if="invoice.Paid">
+          <div class="paid">
+            PAID
+          </div>
+        </template>
+
+        <div class="print">
+          <a href="javascript:window.print()">Print</a>
+        </div>
+      </div><!-- end invoice-content -->
+      </template>
+    </div>
+  </body>
+</html>
