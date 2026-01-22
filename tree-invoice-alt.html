@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.17 (Direct API)</title>
+    <title>Tree Invoice Alt v1.18 (Direct API)</title>
 
     <style>
       body {
@@ -331,6 +331,21 @@
       .create-btn:disabled {
         background: #666;
         cursor: not-allowed;
+      }
+
+      .add-item-btn {
+        background: #4a4;
+        color: white;
+        border: none;
+        padding: 0.5em 1em;
+        font-size: 0.9em;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-top: 0.5em;
+      }
+
+      .add-item-btn:hover {
+        background: #5b5;
       }
 
       /* Editor form styles */
@@ -1247,6 +1262,47 @@
     // Debounced version for text inputs
     const debouncedUpdateTreeField = debounce(updateTreeField, 500);
 
+    // Create a new tree/line item for the current invoice
+    async function createNewTreeItem() {
+      if (!data.invoice || !data.invoice.id) {
+        console.warn('No invoice selected');
+        return;
+      }
+
+      try {
+        data.saveStatus = 'saving';
+
+        // Create new tree record linked to this invoice
+        const result = await grist.docApi.applyUserActions([
+          ['AddRecord', 'Trees', null, {
+            Invoice: data.invoice.id,
+            Description: '',
+            Total: 0,
+            Price: 0,
+            Quantity: 1
+          }]
+        ]);
+
+        const newTreeId = result.retValues[0];
+        console.log('Created new tree item with ID:', newTreeId);
+
+        // Refresh the trees cache
+        const treesTable = await grist.docApi.fetchTable('Trees');
+        tableCache.Trees = tableToRows(treesTable);
+
+        // Rebuild the invoice to include the new item
+        const invoice = buildInvoiceFromRow(data.invoice.id);
+        data.invoice = invoice;
+        window.invoice = invoice;
+
+        data.saveStatus = 'saved';
+        setTimeout(() => { if (data.saveStatus === 'saved') data.saveStatus = ''; }, 1500);
+      } catch (err) {
+        console.error('Failed to create tree item:', err);
+        data.saveStatus = 'error';
+      }
+    }
+
     // Create a new invoice for the selected client
     async function createNewInvoice() {
       if (!data.selectedClientId) {
@@ -1479,6 +1535,9 @@
           createNewInvoice: function() {
             createNewInvoice();
           },
+          createNewTreeItem: function() {
+            createNewTreeItem();
+          },
           // Invoice field editors
           updateInvoiceText: function(field, event) {
             debouncedUpdateInvoiceField(field, event.target.value);
@@ -1688,6 +1747,7 @@
               </td>
             </tr>
           </table>
+          <button class="add-item-btn" @click="createNewTreeItem">+ Add Line Item</button>
 
           <!-- Final Text -->
           <div style="margin-top: 2em;">
