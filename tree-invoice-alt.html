@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.19 (Direct API)</title>
+    <title>Tree Invoice Alt v1.20 (Direct API)</title>
 
     <style>
       body {
@@ -346,6 +346,35 @@
 
       .add-item-btn:hover {
         background: #5b5;
+      }
+
+      .save-btn {
+        background: #2563eb;
+        color: white;
+        border: none;
+        padding: 0.5em 1.5em;
+        font-size: 1em;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+
+      .save-btn:hover {
+        background: #1d4ed8;
+      }
+
+      .save-btn:disabled {
+        background: #666;
+        cursor: not-allowed;
+      }
+
+      .unsaved-indicator {
+        background: #f59e0b;
+        color: white;
+        padding: 0.25em 0.75em;
+        border-radius: 4px;
+        font-size: 0.85em;
+        font-weight: bold;
       }
 
       /* Editor form styles */
@@ -1033,7 +1062,11 @@
       saveStatus: '',
       treeSaveStatus: {},
       // Flag to prevent auto-refresh while we're making changes
-      suppressRefresh: false
+      suppressRefresh: false,
+      // Pending changes (for manual save)
+      pendingInvoiceChanges: {},
+      pendingTreeChanges: {},  // { treeId: { field: value, ... }, ... }
+      hasUnsavedChanges: false
     };
     let app = undefined;
 
@@ -1173,108 +1206,107 @@
       data.invoicesForClient = invoices;
     }
 
-    // Debounce helper
-    function debounce(func, wait) {
-      let timeout;
-      return function(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
-      };
+    // Queue an invoice field change (doesn't save immediately)
+    function queueInvoiceChange(field, value) {
+      if (!data.invoice || !data.invoice.id) return;
+
+      // Convert date strings to timestamps if needed
+      if (['Issued', 'Due', 'Quote_Date'].includes(field) && value) {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+          value = Math.floor(date.getTime() / 1000);
+        }
+      }
+
+      Vue.set(data.pendingInvoiceChanges, field, value);
+      data.hasUnsavedChanges = true;
+
+      // Update the displayed invoice locally (without saving)
+      if (data.invoice) {
+        Vue.set(data.invoice, field, value);
+      }
     }
 
-    // Save status tracking
-    const saveStatus = {
-      invoice: '',
-      trees: {}
-    };
+    // Queue a tree field change (doesn't save immediately)
+    function queueTreeChange(treeId, field, value) {
+      if (!treeId) return;
 
-    // Update an invoice field in Grist
-    async function updateInvoiceField(field, value) {
-      if (!data.invoice || !data.invoice.id) return;
+      if (!data.pendingTreeChanges[treeId]) {
+        Vue.set(data.pendingTreeChanges, treeId, {});
+      }
+      Vue.set(data.pendingTreeChanges[treeId], field, value);
+      data.hasUnsavedChanges = true;
+
+      // Update the displayed item locally (without saving)
+      if (data.invoice && data.invoice.Items) {
+        const item = data.invoice.Items.find(i => i.id === treeId);
+        if (item) {
+          Vue.set(item, field, value);
+        }
+      }
+    }
+
+    // Save all pending changes
+    async function saveAllChanges() {
+      if (!data.hasUnsavedChanges) return;
 
       try {
         data.saveStatus = 'saving';
-        data.suppressRefresh = true;  // Don't auto-refresh while we're saving
+        data.suppressRefresh = true;
 
-        // Convert date strings to timestamps if needed
-        if (['Issued', 'Due', 'Quote_Date'].includes(field) && value) {
-          const date = new Date(value);
-          if (!isNaN(date.getTime())) {
-            value = Math.floor(date.getTime() / 1000);
+        const actions = [];
+
+        // Queue invoice changes
+        if (Object.keys(data.pendingInvoiceChanges).length > 0) {
+          actions.push(['UpdateRecord', 'Invoices2', data.invoice.id, { ...data.pendingInvoiceChanges }]);
+        }
+
+        // Queue tree changes
+        for (const [treeId, changes] of Object.entries(data.pendingTreeChanges)) {
+          if (Object.keys(changes).length > 0) {
+            actions.push(['UpdateRecord', 'Trees', parseInt(treeId), { ...changes }]);
           }
         }
 
-        await grist.docApi.applyUserActions([
-          ['UpdateRecord', 'Invoices2', data.invoice.id, { [field]: value }]
-        ]);
+        if (actions.length > 0) {
+          console.log('Saving actions:', actions);
+          await grist.docApi.applyUserActions(actions);
+        }
 
-        // Update local cache and displayed invoice
-        const cachedInvoice = findById(tableCache.Invoices2, data.invoice.id);
-        if (cachedInvoice) {
-          cachedInvoice[field] = value;
+        // Update caches
+        for (const [field, value] of Object.entries(data.pendingInvoiceChanges)) {
+          const cachedInvoice = findById(tableCache.Invoices2, data.invoice.id);
+          if (cachedInvoice) {
+            cachedInvoice[field] = value;
+          }
         }
-        // Also update the displayed invoice object
-        if (data.invoice) {
-          Vue.set(data.invoice, field, value);
+
+        for (const [treeId, changes] of Object.entries(data.pendingTreeChanges)) {
+          const cachedTree = findById(tableCache.Trees, parseInt(treeId));
+          if (cachedTree) {
+            for (const [field, value] of Object.entries(changes)) {
+              cachedTree[field] = value;
+            }
+          }
         }
+
+        // Clear pending changes
+        data.pendingInvoiceChanges = {};
+        data.pendingTreeChanges = {};
+        data.hasUnsavedChanges = false;
 
         data.saveStatus = 'saved';
         setTimeout(() => {
           if (data.saveStatus === 'saved') data.saveStatus = '';
-          data.suppressRefresh = false;  // Re-enable refresh after a delay
+          data.suppressRefresh = false;
         }, 2000);
       } catch (err) {
-        console.error('Failed to update invoice field:', field, err);
+        console.error('Failed to save changes:', err);
+        alert('Failed to save: ' + err.message);
         data.saveStatus = 'error';
         data.suppressRefresh = false;
       }
     }
-
-    // Debounced version for text inputs
-    const debouncedUpdateInvoiceField = debounce(updateInvoiceField, 500);
-
-    // Update a tree item field in Grist
-    async function updateTreeField(treeId, field, value) {
-      if (!treeId) return;
-
-      try {
-        Vue.set(data.treeSaveStatus, treeId, 'saving');
-        data.suppressRefresh = true;  // Don't auto-refresh while we're saving
-
-        await grist.docApi.applyUserActions([
-          ['UpdateRecord', 'Trees', treeId, { [field]: value }]
-        ]);
-
-        // Update local cache
-        const cachedTree = findById(tableCache.Trees, treeId);
-        if (cachedTree) {
-          cachedTree[field] = value;
-        }
-
-        // Update the displayed invoice items
-        if (data.invoice && data.invoice.Items) {
-          const item = data.invoice.Items.find(i => i.id === treeId);
-          if (item) {
-            Vue.set(item, field, value);
-          }
-        }
-
-        Vue.set(data.treeSaveStatus, treeId, 'saved');
-        setTimeout(() => {
-          if (data.treeSaveStatus[treeId] === 'saved') {
-            Vue.set(data.treeSaveStatus, treeId, '');
-          }
-          data.suppressRefresh = false;  // Re-enable refresh after a delay
-        }, 2000);
-      } catch (err) {
-        console.error('Failed to update tree field:', treeId, field, err);
-        Vue.set(data.treeSaveStatus, treeId, 'error');
-        data.suppressRefresh = false;
-      }
-    }
-
-    // Debounced version for text inputs
-    const debouncedUpdateTreeField = debounce(updateTreeField, 500);
 
     // Create a new tree/line item for the current invoice
     async function createNewTreeItem() {
@@ -1291,11 +1323,11 @@
         console.log('Creating new tree item for invoice:', data.invoice.id);
 
         // Create new tree record linked to this invoice
+        // Note: Total is a formula column, don't try to set it
         await grist.docApi.applyUserActions([
           ['AddRecord', 'Trees', null, {
             Invoice: data.invoice.id,
             Description: 'New item - click to edit',
-            Total: 0,
             Price: 0,
             Quantity: 1
           }]
@@ -1564,27 +1596,30 @@
           createNewTreeItem: function() {
             createNewTreeItem();
           },
-          // Invoice field editors
+          saveAllChanges: function() {
+            saveAllChanges();
+          },
+          // Invoice field editors (queue changes, don't save immediately)
           updateInvoiceText: function(field, event) {
-            debouncedUpdateInvoiceField(field, event.target.value);
+            queueInvoiceChange(field, event.target.value);
           },
           updateInvoiceNumber: function(field, event) {
             const value = parseFloat(event.target.value) || 0;
-            debouncedUpdateInvoiceField(field, value);
+            queueInvoiceChange(field, value);
           },
           updateInvoiceCheckbox: function(field, event) {
-            updateInvoiceField(field, event.target.checked);
+            queueInvoiceChange(field, event.target.checked);
           },
           updateInvoiceDate: function(field, event) {
-            debouncedUpdateInvoiceField(field, event.target.value);
+            queueInvoiceChange(field, event.target.value);
           },
-          // Tree field editors
+          // Tree field editors (queue changes, don't save immediately)
           updateTreeText: function(treeId, field, event) {
-            debouncedUpdateTreeField(treeId, field, event.target.value);
+            queueTreeChange(treeId, field, event.target.value);
           },
           updateTreeNumber: function(treeId, field, event) {
             const value = parseFloat(event.target.value) || 0;
-            debouncedUpdateTreeField(treeId, field, value);
+            queueTreeChange(treeId, field, value);
           },
           // Helper to format date for input
           formatDateForInput: function(timestamp) {
@@ -1659,9 +1694,15 @@
       <template v-if="editMode === 'edit'">
         <div class="edit-mode-bar">
           <span class="mode-label">Edit Mode</span>
-          <span v-if="saveStatus" :class="['save-status', saveStatus]">
-            {{ saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : 'Error' }}
-          </span>
+          <div style="display: flex; align-items: center; gap: 1em;">
+            <span v-if="hasUnsavedChanges" class="unsaved-indicator">Unsaved Changes</span>
+            <span v-if="saveStatus" :class="['save-status', saveStatus]">
+              {{ saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : 'Error' }}
+            </span>
+            <button class="save-btn" @click="saveAllChanges" :disabled="!hasUnsavedChanges || saveStatus === 'saving'">
+              Save Changes
+            </button>
+          </div>
         </div>
         <div class="editable-invoice">
           <!-- Invoicer Selection -->
