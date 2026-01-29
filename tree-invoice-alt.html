@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.35 (Direct API)</title>
+    <title>Tree Invoice Alt v1.36 (Direct API)</title>
 
     <style>
       body {
@@ -1322,6 +1322,7 @@
       selectedInvoiceId: null,
       invoicers: [],
       clients: [],
+      clientSearch: '',
       invoicesForClient: [],
       // Editor state
       editMode: 'preview',
@@ -2198,6 +2199,16 @@
             }
             const task = this.tableCache.Tree_Invoice_Tasks_and_Descriptions.find(t => t.id === taskId);
             return task ? task.Task : '—';
+          },
+          // Get filtered clients based on search query
+          getFilteredClients: function() {
+            if (!this.clientSearch || this.clientSearch.trim() === '') {
+              return this.clients;
+            }
+            const searchLower = this.clientSearch.toLowerCase();
+            return this.clients.filter(client =>
+              client.name.toLowerCase().includes(searchLower)
+            );
           }
         },
         watch: {
@@ -2228,9 +2239,13 @@
           <div class="selector-row">
             <div class="selector-group">
               <label>Client</label>
-              <select @change="onClientSelected" :value="selectedClientId">
+              <input type="text"
+                     v-model="clientSearch"
+                     placeholder="Search clients..."
+                     style="padding: 0.5em; font-size: 1em; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 0.25em;">
+              <select @change="onClientSelected" :value="selectedClientId" size="5" style="width: 100%; min-width: 200px;">
                 <option value="">-- Select Client --</option>
-                <option v-for="client in clients" :key="client.id" :value="client.id">
+                <option v-for="client in getFilteredClients()" :key="client.id" :value="client.id">
                   {{ client.name }}
                 </option>
               </select>
@@ -2266,13 +2281,14 @@
                 <input type="radio" id="mode-worksheet" value="worksheet" v-model="editMode">
                 <label for="mode-worksheet">Print Crew Worksheet</label>
               </div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 1em;">
               <button v-if="editMode === 'preview' || editMode === 'worksheet'"
                       @click="window.print()"
-                      style="background: #2563eb; color: white; border: none; padding: 0.5em 1.5em; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 1em;">
-                🖨️ Print
+                      title="Print"
+                      style="background: #2563eb; color: white; border: none; padding: 0.4em 0.6em; border-radius: 4px; cursor: pointer; font-size: 1.2em; line-height: 1;">
+                🖨️
               </button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1em;">
               <span v-if="saveStatus" :class="['save-status', saveStatus]">
                 {{ saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : 'Error' }}
               </span>
