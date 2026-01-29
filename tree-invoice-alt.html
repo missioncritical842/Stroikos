@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.30 (Direct API)</title>
+    <title>Tree Invoice Alt v1.31 (Direct API)</title>
 
     <style>
       body {
@@ -1666,12 +1666,13 @@
       const deferredMult = form.Deferred_Maintenance_Difficulty ? (findById(tableCache.Deferred_Maintenance_Difficulty, form.Deferred_Maintenance_Difficulty)?.Multiplier || 1) : 1;
       const speciesMult = form.Tree_Kind ? (findById(tableCache.Denver_Area_Tree_Data, form.Tree_Kind)?.Difficulty || 1) : 1;
       const locationMult = form.Location_Difficulty ? (findById(tableCache.Location_Diffifulty, form.Location_Difficulty)?.Multiplier || 1) : 1;
+      const crewMult = form.Crew ? (findById(tableCache.Crew_Hour_Rate, form.Crew)?.Multiplier || 1) : 1;
 
       // Calculate Tree Crew Hours
-      const treeCrewHours = Math.round(baseHours * (1 - groundCrewPercent) * dropZoneMult * deferredMult * speciesMult * 100) / 100;
+      const treeCrewHours = Math.round(baseHours * (1 - groundCrewPercent) * dropZoneMult * deferredMult * speciesMult * crewMult * 100) / 100;
 
       // Calculate Ground Crew Hours
-      const groundCrewHours = Math.round(baseHours * groundCrewPercent * locationMult * deferredMult * speciesMult * 100) / 100;
+      const groundCrewHours = Math.round(baseHours * groundCrewPercent * locationMult * deferredMult * speciesMult * crewMult * 100) / 100;
 
       // Calculate Total Crew Hours
       const totalCrewHours = Math.round((treeCrewHours + groundCrewHours) * 100) / 100;
