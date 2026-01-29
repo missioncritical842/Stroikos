@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.27 (Direct API)</title>
+    <title>Tree Invoice Alt v1.28 (Direct API)</title>
 
     <style>
       body {
@@ -10,6 +10,183 @@
         max-width: 800px;
         margin: 0 auto;
         padding: 5px;
+      }
+
+      /* Modal styles */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .modal-content {
+        background: white;
+        border-radius: 8px;
+        max-width: 600px;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 2em;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5em;
+        padding-bottom: 1em;
+        border-bottom: 2px solid #333;
+      }
+
+      .modal-title {
+        font-size: 1.5em;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .modal-close {
+        background: #999;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 0.5em 1em;
+        cursor: pointer;
+        font-size: 1em;
+      }
+
+      .modal-close:hover {
+        background: #666;
+      }
+
+      .modal-section {
+        margin-bottom: 1.5em;
+      }
+
+      .modal-section-title {
+        font-weight: bold;
+        color: #2a7a2a;
+        margin-bottom: 0.5em;
+        text-transform: uppercase;
+        font-size: 0.9em;
+      }
+
+      .modal-field {
+        margin-bottom: 1em;
+      }
+
+      .modal-field label {
+        display: block;
+        margin-bottom: 0.25em;
+        font-weight: 500;
+        color: #555;
+        font-size: 0.9em;
+      }
+
+      .modal-field input,
+      .modal-field select,
+      .modal-field textarea {
+        width: 100%;
+        padding: 0.5em;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1em;
+        font-family: inherit;
+        box-sizing: border-box;
+      }
+
+      .modal-field input:focus,
+      .modal-field select:focus,
+      .modal-field textarea:focus {
+        outline: none;
+        border-color: #4a4;
+      }
+
+      .modal-field textarea {
+        min-height: 60px;
+        resize: vertical;
+      }
+
+      .modal-row {
+        display: flex;
+        gap: 1em;
+      }
+
+      .modal-row .modal-field {
+        flex: 1;
+      }
+
+      .calc-display {
+        background: #f0f0f0;
+        padding: 1em;
+        border-radius: 4px;
+        margin-top: 1em;
+      }
+
+      .calc-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5em;
+        font-size: 0.95em;
+      }
+
+      .calc-label {
+        font-weight: 500;
+        color: #555;
+      }
+
+      .calc-value {
+        font-weight: bold;
+        color: #2a7a2a;
+      }
+
+      .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1em;
+        margin-top: 2em;
+        padding-top: 1em;
+        border-top: 1px solid #ccc;
+      }
+
+      .modal-submit {
+        background: #2a7a2a;
+        color: white;
+        border: none;
+        padding: 0.75em 2em;
+        font-size: 1em;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+
+      .modal-submit:hover {
+        background: #3a9a3a;
+      }
+
+      .modal-submit:disabled {
+        background: #999;
+        cursor: not-allowed;
+      }
+
+      .modal-cancel {
+        background: #666;
+        color: white;
+        border: none;
+        padding: 0.75em 2em;
+        font-size: 1em;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .modal-cancel:hover {
+        background: #444;
       }
 
       .logo {
@@ -879,7 +1056,13 @@
       Invoicer: null,
       Invoices2: null,
       Trees: null,
-      QuoteInvoice_Content: null
+      QuoteInvoice_Content: null,
+      Denver_Area_Tree_Data: null,
+      Tree_Invoice_Tasks_and_Descriptions: null,
+      Location_Diffifulty: null,
+      Drop_Zone_Diffifculty: null,
+      Deferred_Maintenance_Difficulty: null,
+      Crew_Hour_Rate: null
     };
 
     // Parse Grist's encoded list format: ["L", ["O", {...}], ["O", {...}]]
@@ -940,12 +1123,30 @@
     // Fetch all required tables from Grist API
     async function fetchAllTables() {
       try {
-        const [clientsTable, invoicerTable, invoicesTable, treesTable, quoteInvoiceContentTable] = await Promise.all([
+        const [
+          clientsTable,
+          invoicerTable,
+          invoicesTable,
+          treesTable,
+          quoteInvoiceContentTable,
+          treeDataTable,
+          tasksTable,
+          locationDiffTable,
+          dropZoneDiffTable,
+          deferredMaintenanceTable,
+          crewTable
+        ] = await Promise.all([
           grist.docApi.fetchTable('Clients'),
           grist.docApi.fetchTable('Invoicer'),
           grist.docApi.fetchTable('Invoices2'),
           grist.docApi.fetchTable('Trees'),
-          grist.docApi.fetchTable('QuoteInvoice_Content')
+          grist.docApi.fetchTable('QuoteInvoice_Content'),
+          grist.docApi.fetchTable('Denver_Area_Tree_Data'),
+          grist.docApi.fetchTable('Tree_Invoice_Tasks_and_Descriptions'),
+          grist.docApi.fetchTable('Location_Diffifulty'),
+          grist.docApi.fetchTable('Drop_Zone_Diffifculty'),
+          grist.docApi.fetchTable('Deferred_Maintenance_Difficulty'),
+          grist.docApi.fetchTable('Crew_Hour_Rate')
         ]);
 
         tableCache.Clients = tableToRows(clientsTable);
@@ -953,13 +1154,25 @@
         tableCache.Invoices2 = tableToRows(invoicesTable);
         tableCache.Trees = tableToRows(treesTable);
         tableCache.QuoteInvoice_Content = tableToRows(quoteInvoiceContentTable);
+        tableCache.Denver_Area_Tree_Data = tableToRows(treeDataTable);
+        tableCache.Tree_Invoice_Tasks_and_Descriptions = tableToRows(tasksTable);
+        tableCache.Location_Diffifulty = tableToRows(locationDiffTable);
+        tableCache.Drop_Zone_Diffifculty = tableToRows(dropZoneDiffTable);
+        tableCache.Deferred_Maintenance_Difficulty = tableToRows(deferredMaintenanceTable);
+        tableCache.Crew_Hour_Rate = tableToRows(crewTable);
 
         console.log('Tables fetched:', {
           Clients: tableCache.Clients.length,
           Invoicer: tableCache.Invoicer.length,
           Invoices2: tableCache.Invoices2.length,
           Trees: tableCache.Trees.length,
-          QuoteInvoice_Content: tableCache.QuoteInvoice_Content.length
+          QuoteInvoice_Content: tableCache.QuoteInvoice_Content.length,
+          Denver_Area_Tree_Data: tableCache.Denver_Area_Tree_Data.length,
+          Tree_Invoice_Tasks_and_Descriptions: tableCache.Tree_Invoice_Tasks_and_Descriptions.length,
+          Location_Diffifulty: tableCache.Location_Diffifulty.length,
+          Drop_Zone_Diffifculty: tableCache.Drop_Zone_Diffifculty.length,
+          Deferred_Maintenance_Difficulty: tableCache.Deferred_Maintenance_Difficulty.length,
+          Crew_Hour_Rate: tableCache.Crew_Hour_Rate.length
         });
 
         return true;
@@ -1084,7 +1297,27 @@
       // Pending changes (for manual save)
       pendingInvoiceChanges: {},
       pendingTreeChanges: {},  // { treeId: { field: value, ... }, ... }
-      hasUnsavedChanges: false
+      hasUnsavedChanges: false,
+      // Modal state
+      showTreeModal: false,
+      newTreeForm: {
+        Tree_Kind: null,
+        Height_ft_: null,
+        DBH_in: null,
+        Task: null,
+        Location_Difficulty: null,
+        Drop_Zone_Difficulty: null,
+        Deferred_Maintenance_Difficulty: null,
+        Crew: null,
+        Price: null,
+        Description: ''
+      },
+      calculatedValues: {
+        Tree_Crew_Hours: 0,
+        Ground_Crew_Hours: 0,
+        Total_Crew_Hours: 0,
+        CalcPrice: 0
+      }
     };
     let app = undefined;
 
@@ -1323,11 +1556,119 @@
       }
     }
 
-    // Create a new tree/line item for the current invoice
-    async function createNewTreeItem() {
+    // Open modal to add new tree item
+    function openTreeModal() {
       if (!data.invoice || !data.invoice.id) {
         console.warn('No invoice selected');
         alert('Please select an invoice first');
+        return;
+      }
+
+      // Reset form
+      data.newTreeForm = {
+        Tree_Kind: null,
+        Height_ft_: null,
+        DBH_in: null,
+        Task: null,
+        Location_Difficulty: null,
+        Drop_Zone_Difficulty: null,
+        Deferred_Maintenance_Difficulty: null,
+        Crew: null,
+        Price: null,
+        Description: ''
+      };
+      data.calculatedValues = {
+        Tree_Crew_Hours: 0,
+        Ground_Crew_Hours: 0,
+        Total_Crew_Hours: 0,
+        CalcPrice: 0
+      };
+      data.showTreeModal = true;
+    }
+
+    // Close tree modal
+    function closeTreeModal() {
+      data.showTreeModal = false;
+    }
+
+    // Calculate preview values based on form inputs
+    function calculateTreeValues() {
+      const form = data.newTreeForm;
+
+      // Get the task object
+      const task = form.Task ? findById(tableCache.Tree_Invoice_Tasks_and_Descriptions, form.Task) : null;
+      if (!task) {
+        data.calculatedValues = {
+          Tree_Crew_Hours: 0,
+          Ground_Crew_Hours: 0,
+          Total_Crew_Hours: 0,
+          CalcPrice: 0
+        };
+        return;
+      }
+
+      // Calculate DBH^2
+      const dbh2 = (form.DBH_in || 0) * (form.DBH_in || 0);
+
+      // Base calculation
+      const baseHours = ((form.Height_ft_ || 0) * (task.Height_Coefficient || 0) + dbh2 * (task.DBH_2_Coefficient || 0)) / 2;
+
+      // Get multipliers
+      const groundCrewPercent = task.Ground_Crew_Percent || 0;
+      const dropZoneMult = form.Drop_Zone_Difficulty ? (findById(tableCache.Drop_Zone_Diffifculty, form.Drop_Zone_Difficulty)?.Multiplier || 1) : 1;
+      const deferredMult = form.Deferred_Maintenance_Difficulty ? (findById(tableCache.Deferred_Maintenance_Difficulty, form.Deferred_Maintenance_Difficulty)?.Multiplier || 1) : 1;
+      const speciesMult = form.Tree_Kind ? (findById(tableCache.Denver_Area_Tree_Data, form.Tree_Kind)?.Difficulty || 1) : 1;
+      const locationMult = form.Location_Difficulty ? (findById(tableCache.Location_Diffifulty, form.Location_Difficulty)?.Multiplier || 1) : 1;
+
+      // Calculate Tree Crew Hours
+      const treeCrewHours = Math.round(baseHours * (1 - groundCrewPercent) * dropZoneMult * deferredMult * speciesMult * 100) / 100;
+
+      // Calculate Ground Crew Hours
+      const groundCrewHours = Math.round(baseHours * groundCrewPercent * locationMult * deferredMult * speciesMult * 100) / 100;
+
+      // Calculate Total Crew Hours
+      const totalCrewHours = Math.round((treeCrewHours + groundCrewHours) * 100) / 100;
+
+      // Calculate Price
+      let calcPrice = 0;
+      if (task.Task === "Grind Stump") {
+        // Stump grinding uses per-inch rate (we'll use a default of 9 if not available)
+        const perInchRate = 9;
+        calcPrice = (form.Stump_Diameter_in || 0) * perInchRate;
+      } else {
+        // For all other tasks: Total Crew Hours × Crew Rate
+        const crewRate = form.Crew ? (findById(tableCache.Crew_Hour_Rate, form.Crew)?.Rate || 0) : 0;
+        calcPrice = totalCrewHours * crewRate;
+      }
+      // Round to nearest $5
+      calcPrice = Math.round(calcPrice / 5) * 5;
+
+      data.calculatedValues = {
+        Tree_Crew_Hours: treeCrewHours,
+        Ground_Crew_Hours: groundCrewHours,
+        Total_Crew_Hours: totalCrewHours,
+        CalcPrice: calcPrice
+      };
+
+      // Auto-populate price if not set
+      if (form.Price === null || form.Price === 0) {
+        data.newTreeForm.Price = calcPrice;
+      }
+    }
+
+    // Submit new tree form
+    async function submitNewTree() {
+      if (!data.invoice || !data.invoice.id) {
+        console.warn('No invoice selected');
+        alert('Please select an invoice first');
+        return;
+      }
+
+      const form = data.newTreeForm;
+
+      // Validate required fields
+      if (!form.Tree_Kind || !form.Task || !form.Crew) {
+        alert('Please fill in at least Tree Kind, Task, and Crew');
         return;
       }
 
@@ -1338,17 +1679,29 @@
         console.log('Creating new tree item for invoice:', data.invoice.id);
 
         // Create new tree record linked to this invoice
-        // Note: Total is a formula column, don't try to set it
+        const record = {
+          Invoice: data.invoice.id,
+          Tree_Kind: form.Tree_Kind,
+          Height_ft_: form.Height_ft_ || 0,
+          DBH_in: form.DBH_in || 0,
+          Task: form.Task,
+          Location_Difficulty: form.Location_Difficulty,
+          Drop_Zone_Difficulty: form.Drop_Zone_Difficulty,
+          Deferred_Maintenance_Difficulty: form.Deferred_Maintenance_Difficulty,
+          Crew: form.Crew,
+          Price: form.Price || 0,
+          Description: form.Description || '',
+          Quantity: 1
+        };
+
         await grist.docApi.applyUserActions([
-          ['AddRecord', 'Trees', null, {
-            Invoice: data.invoice.id,
-            Description: 'New item - click to edit',
-            Price: 0,
-            Quantity: 1
-          }]
+          ['AddRecord', 'Trees', null, record]
         ]);
 
         console.log('Tree item created, refreshing...');
+
+        // Close modal
+        data.showTreeModal = false;
 
         // Refresh the trees cache
         const treesTable = await grist.docApi.fetchTable('Trees');
@@ -1602,6 +1955,9 @@
         handleError(err);
       };
 
+      // Add tableCache to data
+      data.tableCache = tableCache;
+
       app = new Vue({
         el: '#app',
         data: data,
@@ -1618,8 +1974,18 @@
           createNewInvoice: function() {
             createNewInvoice();
           },
-          createNewTreeItem: function() {
-            createNewTreeItem();
+          openTreeModal: function() {
+            openTreeModal();
+          },
+          closeTreeModal: function() {
+            closeTreeModal();
+          },
+          submitNewTree: function() {
+            submitNewTree();
+          },
+          updateTreeFormField: function(field, value) {
+            this.newTreeForm[field] = value;
+            calculateTreeValues();
           },
           saveAllChanges: function() {
             saveAllChanges();
@@ -1875,7 +2241,7 @@
               </td>
             </tr>
           </table>
-          <button class="add-item-btn" @click="createNewTreeItem">+ Add Line Item</button>
+          <button class="add-item-btn" @click="openTreeModal">+ Add Line Item</button>
 
           <!-- Final Text -->
           <div style="margin-top: 2em;">
@@ -2048,6 +2414,137 @@
         </div>
       </div><!-- end invoice-content -->
       </template>
+
+      <!-- Tree Item Modal -->
+      <div v-if="showTreeModal" class="modal-overlay" @click.self="closeTreeModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <div class="modal-title">Add New Tree Item</div>
+            <button class="modal-close" @click="closeTreeModal">Close</button>
+          </div>
+
+          <div class="modal-section">
+            <div class="modal-section-title">Tree Details</div>
+
+            <div class="modal-field">
+              <label>Tree Kind *</label>
+              <select :value="newTreeForm.Tree_Kind" @change="updateTreeFormField('Tree_Kind', parseInt($event.target.value))">
+                <option value="">-- Select Tree Kind --</option>
+                <option v-for="tree in (tableCache.Denver_Area_Tree_Data || [])" :key="tree.id" :value="tree.id">
+                  {{ tree.Tree_Species }}
+                </option>
+              </select>
+            </div>
+
+            <div class="modal-row">
+              <div class="modal-field">
+                <label>Height (ft)</label>
+                <input type="number" :value="newTreeForm.Height_ft_" @input="updateTreeFormField('Height_ft_', parseFloat($event.target.value) || 0)">
+              </div>
+              <div class="modal-field">
+                <label>DBH (in)</label>
+                <input type="number" :value="newTreeForm.DBH_in" @input="updateTreeFormField('DBH_in', parseFloat($event.target.value) || 0)">
+              </div>
+            </div>
+
+            <div class="modal-field">
+              <label>Task *</label>
+              <select :value="newTreeForm.Task" @change="updateTreeFormField('Task', parseInt($event.target.value))">
+                <option value="">-- Select Task --</option>
+                <option v-for="task in (tableCache.Tree_Invoice_Tasks_and_Descriptions || [])" :key="task.id" :value="task.id">
+                  {{ task.Task }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div class="modal-section">
+            <div class="modal-section-title">Difficulty Factors</div>
+
+            <div class="modal-field">
+              <label>Location Difficulty</label>
+              <select :value="newTreeForm.Location_Difficulty" @change="updateTreeFormField('Location_Difficulty', parseInt($event.target.value))">
+                <option value="">-- Select Location Difficulty --</option>
+                <option v-for="loc in (tableCache.Location_Diffifulty || [])" :key="loc.id" :value="loc.id">
+                  {{ loc.Description }} ({{ loc.Multiplier }}x)
+                </option>
+              </select>
+            </div>
+
+            <div class="modal-field">
+              <label>Drop Zone Difficulty</label>
+              <select :value="newTreeForm.Drop_Zone_Difficulty" @change="updateTreeFormField('Drop_Zone_Difficulty', parseInt($event.target.value))">
+                <option value="">-- Select Drop Zone Difficulty --</option>
+                <option v-for="dz in (tableCache.Drop_Zone_Diffifculty || [])" :key="dz.id" :value="dz.id">
+                  {{ dz.Description }} ({{ dz.Multiplier }}x)
+                </option>
+              </select>
+            </div>
+
+            <div class="modal-field">
+              <label>Deferred Maintenance</label>
+              <select :value="newTreeForm.Deferred_Maintenance_Difficulty" @change="updateTreeFormField('Deferred_Maintenance_Difficulty', parseInt($event.target.value))">
+                <option value="">-- Select Deferred Maintenance --</option>
+                <option v-for="dm in (tableCache.Deferred_Maintenance_Difficulty || [])" :key="dm.id" :value="dm.id">
+                  {{ dm.Description }} ({{ dm.Multiplier }}x)
+                </option>
+              </select>
+            </div>
+
+            <div class="modal-field">
+              <label>Crew *</label>
+              <select :value="newTreeForm.Crew" @change="updateTreeFormField('Crew', parseInt($event.target.value))">
+                <option value="">-- Select Crew --</option>
+                <option v-for="crew in (tableCache.Crew_Hour_Rate || [])" :key="crew.id" :value="crew.id">
+                  {{ crew.Description }} (${{ crew.Rate }}/hr)
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div class="modal-section">
+            <div class="modal-section-title">Calculated Values</div>
+            <div class="calc-display">
+              <div class="calc-row">
+                <span class="calc-label">Tree Crew Hours:</span>
+                <span class="calc-value">{{ calculatedValues.Tree_Crew_Hours.toFixed(2) }}</span>
+              </div>
+              <div class="calc-row">
+                <span class="calc-label">Ground Crew Hours:</span>
+                <span class="calc-value">{{ calculatedValues.Ground_Crew_Hours.toFixed(2) }}</span>
+              </div>
+              <div class="calc-row">
+                <span class="calc-label">Total Crew Hours:</span>
+                <span class="calc-value">{{ calculatedValues.Total_Crew_Hours.toFixed(2) }}</span>
+              </div>
+              <div class="calc-row" style="border-top: 1px solid #ccc; padding-top: 0.5em; margin-top: 0.5em;">
+                <span class="calc-label">Calculated Price:</span>
+                <span class="calc-value">${{ calculatedValues.CalcPrice.toLocaleString('en-US') }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-section">
+            <div class="modal-section-title">Final Details</div>
+
+            <div class="modal-field">
+              <label>Price</label>
+              <input type="number" :value="newTreeForm.Price" @input="newTreeForm.Price = parseFloat($event.target.value) || 0">
+            </div>
+
+            <div class="modal-field">
+              <label>Description</label>
+              <textarea :value="newTreeForm.Description" @input="newTreeForm.Description = $event.target.value" placeholder="Enter item description..."></textarea>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="modal-cancel" @click="closeTreeModal">Cancel</button>
+            <button class="modal-submit" @click="submitNewTree">Add Tree Item</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </body>
 </html>
