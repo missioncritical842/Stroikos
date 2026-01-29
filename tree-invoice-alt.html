@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.34 (Direct API)</title>
+    <title>Tree Invoice Alt v1.35 (Direct API)</title>
 
     <style>
       body {
@@ -2182,6 +2182,22 @@
             });
 
             return Array.from(crewMap.values());
+          },
+          // Get tree species name from Tree_Kind ID
+          getTreeSpecies: function(treeKindId) {
+            if (!treeKindId || !this.tableCache.Denver_Area_Tree_Data) {
+              return '—';
+            }
+            const tree = this.tableCache.Denver_Area_Tree_Data.find(t => t.id === treeKindId);
+            return tree ? tree.Tree_Species : '—';
+          },
+          // Get task name from Task ID
+          getTaskName: function(taskId) {
+            if (!taskId || !this.tableCache.Tree_Invoice_Tasks_and_Descriptions) {
+              return '—';
+            }
+            const task = this.tableCache.Tree_Invoice_Tasks_and_Descriptions.find(t => t.id === taskId);
+            return task ? task.Task : '—';
           }
         },
         watch: {
@@ -2655,19 +2671,25 @@
         <!-- Crew Hours Table -->
         <table class="items" style="margin-top: 1.5em; font-size: 0.85em;">
           <tr>
-            <th>Task Description</th>
-            <th class="number">Tree Crew Hours</th>
-            <th class="number">Ground Crew Hours</th>
-            <th class="number">Total Crew Hours</th>
+            <th>Tree Kind</th>
+            <th>Task</th>
+            <th class="number">DBH (in)</th>
+            <th class="number">Height (ft)</th>
+            <th class="number">Tree Crew Hrs</th>
+            <th class="number">Ground Crew Hrs</th>
+            <th class="number">Total Hrs</th>
           </tr>
           <tr v-for="(item, index) in invoice.Items">
-            <td>{{ item.Description || [item.Task_Description_Start, [item.Tree_Kind, item.Task_Descriptions].filter(Boolean).join('')].filter(Boolean).join(' ') }}</td>
+            <td>{{ getTreeSpecies(item.Tree_Kind) }}</td>
+            <td>{{ getTaskName(item.Task) }}</td>
+            <td class="number">{{ item.DBH_in || '—' }}</td>
+            <td class="number">{{ item.Height_ft_ || '—' }}</td>
             <td class="number">{{ (item.Tree_Crew_Hours || 0).toFixed(2) }}</td>
             <td class="number">{{ (item.Ground_Crew_Hours || 0).toFixed(2) }}</td>
             <td class="number">{{ (item.Total_Crew_Hours || 0).toFixed(2) }}</td>
           </tr>
           <tr class="total-row">
-            <td class="total-label">Total Hours</td>
+            <td colspan="4" class="total-label">Total Hours</td>
             <td class="number"><strong>{{ invoice.Items.reduce((sum, item) => sum + (Number(item.Tree_Crew_Hours) || 0), 0).toFixed(2) }}</strong></td>
             <td class="number"><strong>{{ invoice.Items.reduce((sum, item) => sum + (Number(item.Ground_Crew_Hours) || 0), 0).toFixed(2) }}</strong></td>
             <td class="number"><strong>{{ invoice.Items.reduce((sum, item) => sum + (Number(item.Total_Crew_Hours) || 0), 0).toFixed(2) }}</strong></td>
