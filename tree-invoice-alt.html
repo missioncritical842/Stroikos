@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.46 (Direct API)</title>
+    <title>Tree Invoice Alt v1.47 (Direct API)</title>
 
     <style>
       body {
@@ -2321,18 +2321,22 @@
             </div>
             <div class="selector-group">
               <label>Invoice/Quote</label>
-              <select @change="onInvoiceSelected" :value="selectedInvoiceId" :disabled="!selectedClientId" style="padding: 0.5em; font-size: 1em; border: 1px solid #ccc; border-radius: 4px; min-width: 200px; box-sizing: border-box;">
-                <option value="">-- Select Invoice --</option>
-                <option v-for="inv in invoicesForClient" :key="inv.id" :value="inv.id">
-                  {{ inv.label }}
-                </option>
-              </select>
+              <div style="position: relative;">
+                <select @change="onInvoiceSelected" :value="selectedInvoiceId" :disabled="!selectedClientId" style="padding: 0.5em; font-size: 1em; border: 1px solid #ccc; border-radius: 4px; min-width: 200px; box-sizing: border-box; width: 100%;">
+                  <option value="">-- Select Invoice --</option>
+                  <option v-for="inv in invoicesForClient" :key="inv.id" :value="inv.id">
+                    {{ inv.label }}
+                  </option>
+                </select>
+              </div>
             </div>
             <div class="selector-group">
               <label>&nbsp;</label>
-              <button class="create-btn" @click="createNewInvoice" :disabled="!selectedClientId">
-                + New Quote
-              </button>
+              <div style="position: relative;">
+                <button class="create-btn" @click="createNewInvoice" :disabled="!selectedClientId">
+                  + New Quote
+                </button>
+              </div>
             </div>
           </div>
         </div>
