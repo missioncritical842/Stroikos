@@ -1300,6 +1300,7 @@
       hasUnsavedChanges: false,
       // Modal state
       showTreeModal: false,
+      editingTreeId: null, // null = creating new, number = editing existing
       newTreeForm: {
         Tree_Kind: null,
         Height_ft_: null,
@@ -1564,7 +1565,8 @@
         return;
       }
 
-      // Reset form
+      // Reset form for new item
+      data.editingTreeId = null;
       data.newTreeForm = {
         Tree_Kind: null,
         Height_ft_: null,
@@ -1583,6 +1585,41 @@
         Total_Crew_Hours: 0,
         CalcPrice: 0
       };
+      data.showTreeModal = true;
+    }
+
+    // Open modal to edit existing tree item
+    function openEditTreeModal(treeId) {
+      if (!data.invoice || !data.invoice.id) {
+        console.warn('No invoice selected');
+        return;
+      }
+
+      // Find the tree item
+      const tree = data.invoice.Items.find(item => item.id === treeId);
+      if (!tree) {
+        console.warn('Tree item not found:', treeId);
+        return;
+      }
+
+      // Populate form with existing data
+      data.editingTreeId = treeId;
+      data.newTreeForm = {
+        Tree_Kind: tree.Tree_Kind || null,
+        Height_ft_: tree.Height_ft_ || 0,
+        DBH_in: tree.DBH_in || 0,
+        Task: tree.Task || null,
+        Location_Difficulty: tree.Location_Difficulty || null,
+        Drop_Zone_Difficulty: tree.Drop_Zone_Difficulty || null,
+        Deferred_Maintenance_Difficulty: tree.Deferred_Maintenance_Difficulty || null,
+        Crew: tree.Crew || null,
+        Price: tree.Price || 0,
+        Description: tree.Description || ''
+      };
+
+      // Calculate values based on existing data
+      calculateTreeValues();
+
       data.showTreeModal = true;
     }
 
@@ -1666,7 +1703,7 @@
       }
     }
 
-    // Submit new tree form
+    // Submit tree form (create or update)
     async function submitNewTree() {
       if (!data.invoice || !data.invoice.id) {
         console.warn('No invoice selected');
@@ -1686,11 +1723,7 @@
         data.saveStatus = 'saving';
         data.suppressRefresh = true;
 
-        console.log('Creating new tree item for invoice:', data.invoice.id);
-
-        // Create new tree record linked to this invoice
         const record = {
-          Invoice: data.invoice.id,
           Tree_Kind: form.Tree_Kind,
           Height_ft_: form.Height_ft_ || 0,
           DBH_in: form.DBH_in || 0,
@@ -1704,20 +1737,36 @@
           Quantity: 1
         };
 
-        await grist.docApi.applyUserActions([
-          ['AddRecord', 'Trees', null, record]
-        ]);
-
-        console.log('Tree item created, refreshing...');
+        if (data.editingTreeId) {
+          // Update existing record
+          console.log('Updating tree item:', data.editingTreeId);
+          await grist.docApi.applyUserActions([
+            ['UpdateRecord', 'Trees', data.editingTreeId, record]
+          ]);
+          console.log('Tree item updated, refreshing...');
+        } else {
+          // Create new record
+          console.log('Creating new tree item for invoice:', data.invoice.id);
+          record.Invoice = data.invoice.id;
+          await grist.docApi.applyUserActions([
+            ['AddRecord', 'Trees', null, record]
+          ]);
+          console.log('Tree item created, refreshing...');
+        }
 
         // Close modal
         data.showTreeModal = false;
+        data.editingTreeId = null;
 
-        // Refresh the trees cache
-        const treesTable = await grist.docApi.fetchTable('Trees');
+        // Refresh the trees and invoices cache
+        const [treesTable, invoicesTable] = await Promise.all([
+          grist.docApi.fetchTable('Trees'),
+          grist.docApi.fetchTable('Invoices2')
+        ]);
         tableCache.Trees = tableToRows(treesTable);
+        tableCache.Invoices2 = tableToRows(invoicesTable);
 
-        // Rebuild the invoice to include the new item
+        // Rebuild the invoice to include the updated item
         const invoice = buildInvoiceFromRow(data.invoice.id);
         data.invoice = invoice;
         window.invoice = invoice;
@@ -1728,8 +1777,8 @@
           data.suppressRefresh = false;
         }, 2000);
       } catch (err) {
-        console.error('Failed to create tree item:', err);
-        alert('Failed to create item: ' + err.message);
+        console.error('Failed to save tree item:', err);
+        alert('Failed to save item: ' + err.message);
         data.saveStatus = 'error';
         data.suppressRefresh = false;
       }
@@ -1752,18 +1801,31 @@
         const finalQuoteText = getTemplateContent('FinalQuoteTextTrees');
         const finalInvoiceText = getTemplateContent('FinalInvoiceTextTrees');
 
+        // Get default invoicer (first one in the list, or selected one)
+        let defaultInvoicerId = data.selectedInvoicerId;
+        if (!defaultInvoicerId && tableCache.Invoicer && tableCache.Invoicer.length > 0) {
+          // Default to first invoicer
+          defaultInvoicerId = tableCache.Invoicer[0].id;
+        }
+
         // Create new invoice record with default text from templates
         // The Number field will be auto-generated by trigger formula ($id + 660)
+        const newInvoiceData = {
+          Client: data.selectedClientId,
+          Invoice: false,  // Default to quote
+          Issued: Math.floor(Date.now() / 1000),  // Today's date
+          QuoteNote: quoteNote,
+          InvoiceNote: invoiceNote,
+          FinalQuoteText: finalQuoteText,
+          FinalInvoiceText: finalInvoiceText
+        };
+
+        if (defaultInvoicerId) {
+          newInvoiceData.Invoicer = defaultInvoicerId;
+        }
+
         await grist.docApi.applyUserActions([
-          ['AddRecord', 'Invoices2', null, {
-            Client: data.selectedClientId,
-            Invoice: false,  // Default to quote
-            Issued: Math.floor(Date.now() / 1000),  // Today's date
-            QuoteNote: quoteNote,
-            InvoiceNote: invoiceNote,
-            FinalQuoteText: finalQuoteText,
-            FinalInvoiceText: finalInvoiceText
-          }]
+          ['AddRecord', 'Invoices2', null, newInvoiceData]
         ]);
 
         console.log('Invoice created, refreshing tables...');
@@ -1987,6 +2049,9 @@
           openTreeModal: function() {
             openTreeModal();
           },
+          openEditTreeModal: function(treeId) {
+            openEditTreeModal(treeId);
+          },
           closeTreeModal: function() {
             closeTreeModal();
           },
@@ -2051,6 +2116,13 @@
               return 0;
             }
             return this.invoice.Items.reduce((sum, item) => sum + (Number(item.Total) || 0), 0);
+          },
+          // Get invoice total - use invoice.Total if available, otherwise calculate from items
+          getInvoiceTotal: function() {
+            if (this.invoice && this.invoice.Total && Number(this.invoice.Total) > 0) {
+              return Number(this.invoice.Total);
+            }
+            return this.calculateTotal();
           }
         },
         watch: {
@@ -2232,6 +2304,7 @@
             <tr>
               <th>Description</th>
               <th class="money" style="width: 100px;">Price</th>
+              <th style="width: 60px;"></th>
             </tr>
             <tr v-for="(item, index) in invoice.Items" :key="item.id">
               <td>
@@ -2242,6 +2315,9 @@
               </td>
               <td class="money">
                 <input type="number" class="edit-input number" :value="item.Price" @input="updateTreeNumber(item.id, 'Price', $event)">
+              </td>
+              <td style="text-align: center;">
+                <button @click="openEditTreeModal(item.id)" style="background: #2a7a2a; color: white; border: none; padding: 0.25em 0.5em; border-radius: 3px; cursor: pointer; font-size: 0.85em;">Edit</button>
               </td>
             </tr>
             <tr class="total-row">
@@ -2387,7 +2463,7 @@
               <td class="money">
                 <span>
                   <span class="currency-symbol">$</span>
-                  <span>{{ Math.round(Number(invoice.Total)).toLocaleString('en-US') }}</span>
+                  <span>{{ Math.round(getInvoiceTotal()).toLocaleString('en-US') }}</span>
                 </span>
               </td>
             </tr>
@@ -2429,7 +2505,7 @@
       <div v-if="showTreeModal" class="modal-overlay" @click.self="closeTreeModal">
         <div class="modal-content">
           <div class="modal-header">
-            <div class="modal-title">Add New Tree Item</div>
+            <div class="modal-title">{{ editingTreeId ? 'Edit Tree Item' : 'Add New Tree Item' }}</div>
             <button class="modal-close" @click="closeTreeModal">Close</button>
           </div>
 
@@ -2550,7 +2626,7 @@
 
           <div class="modal-footer">
             <button class="modal-cancel" @click="closeTreeModal">Cancel</button>
-            <button class="modal-submit" @click="submitNewTree">Add Tree Item</button>
+            <button class="modal-submit" @click="submitNewTree">{{ editingTreeId ? 'Update Tree Item' : 'Add Tree Item' }}</button>
           </div>
         </div>
       </div>
