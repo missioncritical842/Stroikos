@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.33 (Direct API)</title>
+    <title>Tree Invoice Alt v1.34 (Direct API)</title>
 
     <style>
       body {
@@ -2646,7 +2646,6 @@
             <template v-for="crew in getUniqueCrews()">
               <div style="margin-bottom: 0.25em;">
                 <strong>{{ crew.description }}</strong>
-                <span style="color: #666; margin-left: 1em;">Rate: ${{ crew.rate }}/hr | Multiplier: {{ crew.multiplier }}x</span>
               </div>
             </template>
           </div>
@@ -2654,7 +2653,7 @@
         </div>
 
         <!-- Crew Hours Table -->
-        <table class="items" style="margin-top: 1.5em;">
+        <table class="items" style="margin-top: 1.5em; font-size: 0.85em;">
           <tr>
             <th>Task Description</th>
             <th class="number">Tree Crew Hours</th>
