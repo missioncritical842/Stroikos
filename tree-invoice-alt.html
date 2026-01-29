@@ -1607,6 +1607,16 @@
         return;
       }
 
+      // Auto-populate description: Description_Start + Tree_Species + Descriptions
+      const treeKind = form.Tree_Kind ? findById(tableCache.Denver_Area_Tree_Data, form.Tree_Kind) : null;
+      const descriptionStart = task.Description_Start || '';
+      const treeSpecies = treeKind ? treeKind.Tree_Species : '';
+      const descriptions = task.Descriptions || '';
+
+      // Concatenate: "Description_Start Tree_Species Descriptions"
+      const autoDescription = [descriptionStart, treeSpecies, descriptions].filter(Boolean).join(' ');
+      data.newTreeForm.Description = autoDescription;
+
       // Calculate DBH^2
       const dbh2 = (form.DBH_in || 0) * (form.DBH_in || 0);
 
