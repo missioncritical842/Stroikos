@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.36 (Direct API)</title>
+    <title>Tree Invoice Alt v1.37 (Direct API)</title>
 
     <style>
       body {
@@ -2689,26 +2689,26 @@
           <tr>
             <th>Tree Kind</th>
             <th>Task</th>
-            <th class="number">DBH (in)</th>
-            <th class="number">Height (ft)</th>
-            <th class="number">Tree Crew Hrs</th>
-            <th class="number">Ground Crew Hrs</th>
-            <th class="number">Total Hrs</th>
+            <th style="text-align: center;">DBH (in)</th>
+            <th style="text-align: center;">Height (ft)</th>
+            <th style="text-align: center;">Tree Crew Hrs</th>
+            <th style="text-align: center;">Ground Crew Hrs</th>
+            <th style="text-align: center;">Total Hrs</th>
           </tr>
           <tr v-for="(item, index) in invoice.Items">
             <td>{{ getTreeSpecies(item.Tree_Kind) }}</td>
             <td>{{ getTaskName(item.Task) }}</td>
-            <td class="number">{{ item.DBH_in || '—' }}</td>
-            <td class="number">{{ item.Height_ft_ || '—' }}</td>
-            <td class="number">{{ (item.Tree_Crew_Hours || 0).toFixed(2) }}</td>
-            <td class="number">{{ (item.Ground_Crew_Hours || 0).toFixed(2) }}</td>
-            <td class="number">{{ (item.Total_Crew_Hours || 0).toFixed(2) }}</td>
+            <td style="text-align: center;">{{ item.DBH_in || '—' }}</td>
+            <td style="text-align: center;">{{ item.Height_ft_ || '—' }}</td>
+            <td style="text-align: center;">{{ (item.Tree_Crew_Hours || 0).toFixed(2) }}</td>
+            <td style="text-align: center;">{{ (item.Ground_Crew_Hours || 0).toFixed(2) }}</td>
+            <td style="text-align: center;">{{ (item.Total_Crew_Hours || 0).toFixed(2) }}</td>
           </tr>
           <tr class="total-row">
             <td colspan="4" class="total-label">Total Hours</td>
-            <td class="number"><strong>{{ invoice.Items.reduce((sum, item) => sum + (Number(item.Tree_Crew_Hours) || 0), 0).toFixed(2) }}</strong></td>
-            <td class="number"><strong>{{ invoice.Items.reduce((sum, item) => sum + (Number(item.Ground_Crew_Hours) || 0), 0).toFixed(2) }}</strong></td>
-            <td class="number"><strong>{{ invoice.Items.reduce((sum, item) => sum + (Number(item.Total_Crew_Hours) || 0), 0).toFixed(2) }}</strong></td>
+            <td style="text-align: center;"><strong>{{ invoice.Items.reduce((sum, item) => sum + (Number(item.Tree_Crew_Hours) || 0), 0).toFixed(2) }}</strong></td>
+            <td style="text-align: center;"><strong>{{ invoice.Items.reduce((sum, item) => sum + (Number(item.Ground_Crew_Hours) || 0), 0).toFixed(2) }}</strong></td>
+            <td style="text-align: center;"><strong>{{ invoice.Items.reduce((sum, item) => sum + (Number(item.Total_Crew_Hours) || 0), 0).toFixed(2) }}</strong></td>
           </tr>
         </table>
 
