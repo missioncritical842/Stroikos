@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.45 (Direct API)</title>
+    <title>Tree Invoice Alt v1.46 (Direct API)</title>
 
     <style>
       body {
@@ -570,11 +570,12 @@
       .create-btn {
         background: #2a7a2a;
         color: white;
-        border: none;
+        border: 1px solid #2a7a2a;
         padding: 0.5em 1em;
         font-size: 1em;
         border-radius: 4px;
         cursor: pointer;
+        box-sizing: border-box;
       }
 
       .create-btn:hover {
@@ -2304,7 +2305,7 @@
                        @focus="showClientDropdown = true"
                        @blur="hideClientDropdown"
                        placeholder="Type to search clients..."
-                       style="padding: 0.5em; font-size: 1em; border: 1px solid #ccc; border-radius: 4px; min-width: 200px; width: 100%;">
+                       style="padding: 0.5em; font-size: 1em; border: 1px solid #ccc; border-radius: 4px; min-width: 200px; width: 100%; box-sizing: border-box;">
                 <div v-if="showClientDropdown && getFilteredClients().length > 0" class="autocomplete-dropdown">
                   <div v-for="client in getFilteredClients()"
                        :key="client.id"
@@ -2320,7 +2321,7 @@
             </div>
             <div class="selector-group">
               <label>Invoice/Quote</label>
-              <select @change="onInvoiceSelected" :value="selectedInvoiceId" :disabled="!selectedClientId" style="padding: 0.5em; font-size: 1em;">
+              <select @change="onInvoiceSelected" :value="selectedInvoiceId" :disabled="!selectedClientId" style="padding: 0.5em; font-size: 1em; border: 1px solid #ccc; border-radius: 4px; min-width: 200px; box-sizing: border-box;">
                 <option value="">-- Select Invoice --</option>
                 <option v-for="inv in invoicesForClient" :key="inv.id" :value="inv.id">
                   {{ inv.label }}
