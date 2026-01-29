@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.43 (Direct API)</title>
+    <title>Tree Invoice Alt v1.44 (Direct API)</title>
 
     <style>
       body {
@@ -2322,9 +2322,12 @@
                 </option>
               </select>
             </div>
-            <button class="create-btn" @click="createNewInvoice" :disabled="!selectedClientId">
-              + New Quote
-            </button>
+            <div class="selector-group">
+              <label>&nbsp;</label>
+              <button class="create-btn" @click="createNewInvoice" :disabled="!selectedClientId">
+                + New Quote
+              </button>
+            </div>
           </div>
         </div>
 
