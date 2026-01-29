@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.37 (Direct API)</title>
+    <title>Tree Invoice Alt v1.38 (Direct API)</title>
 
     <style>
       body {
@@ -478,6 +478,40 @@
         margin-bottom: 0;
         color: #fff;
         font-size: 0.9em;
+      }
+
+      /* Autocomplete dropdown styles */
+      .autocomplete-container {
+        position: relative;
+      }
+
+      .autocomplete-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ccc;
+        border-top: none;
+        border-radius: 0 0 4px 4px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      }
+
+      .autocomplete-item {
+        padding: 0.5em;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+      }
+
+      .autocomplete-item:hover {
+        background: #f0f0f0;
+      }
+
+      .autocomplete-item:last-child {
+        border-bottom: none;
       }
 
       .panel-title {
@@ -1323,6 +1357,7 @@
       invoicers: [],
       clients: [],
       clientSearch: '',
+      showClientDropdown: false,
       invoicesForClient: [],
       // Editor state
       editMode: 'preview',
@@ -2209,6 +2244,24 @@
             return this.clients.filter(client =>
               client.name.toLowerCase().includes(searchLower)
             );
+          },
+          // Select a client from dropdown
+          selectClient: function(clientId) {
+            this.showClientDropdown = false;
+            onClientSelected(clientId);
+            // Clear search to show selected client name
+            this.clientSearch = '';
+          },
+          // Hide client dropdown with delay to allow click events
+          hideClientDropdown: function() {
+            setTimeout(() => {
+              this.showClientDropdown = false;
+            }, 200);
+          },
+          // Get client name by ID
+          getClientName: function(clientId) {
+            const client = this.clients.find(c => c.id === clientId);
+            return client ? client.name : '';
           }
         },
         watch: {
@@ -2237,18 +2290,25 @@
         <div class="selector-panel">
           <div class="panel-title">Select Invoice</div>
           <div class="selector-row">
-            <div class="selector-group">
+            <div class="selector-group autocomplete-container">
               <label>Client</label>
               <input type="text"
                      v-model="clientSearch"
-                     placeholder="Search clients..."
-                     style="padding: 0.5em; font-size: 1em; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 0.25em;">
-              <select @change="onClientSelected" :value="selectedClientId" size="5" style="width: 100%; min-width: 200px;">
-                <option value="">-- Select Client --</option>
-                <option v-for="client in getFilteredClients()" :key="client.id" :value="client.id">
+                     @focus="showClientDropdown = true"
+                     @blur="hideClientDropdown"
+                     placeholder="Type to search clients..."
+                     style="padding: 0.5em; font-size: 1em; border: 1px solid #ccc; border-radius: 4px; min-width: 200px;">
+              <div v-if="showClientDropdown && getFilteredClients().length > 0" class="autocomplete-dropdown">
+                <div v-for="client in getFilteredClients()"
+                     :key="client.id"
+                     class="autocomplete-item"
+                     @mousedown.prevent="selectClient(client.id)">
                   {{ client.name }}
-                </option>
-              </select>
+                </div>
+              </div>
+              <div v-if="selectedClientId" style="margin-top: 0.25em; font-size: 0.85em; color: #ccc;">
+                Selected: {{ getClientName(selectedClientId) }}
+              </div>
             </div>
             <div class="selector-group">
               <label>Invoice/Quote</label>
