@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.31 (Direct API)</title>
+    <title>Tree Invoice Alt v1.32 (Direct API)</title>
 
     <style>
       body {
@@ -443,6 +443,41 @@
 
       .editor-panel {
         background: #1a5a1a;
+      }
+
+      /* Radio button styles */
+      .mode-selector {
+        display: flex;
+        gap: 1em;
+        align-items: center;
+      }
+
+      .mode-option {
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        cursor: pointer;
+        padding: 0.5em 0.75em;
+        background: rgba(255,255,255,0.1);
+        border-radius: 4px;
+        transition: background 0.2s;
+      }
+
+      .mode-option:hover {
+        background: rgba(255,255,255,0.2);
+      }
+
+      .mode-option input[type="radio"] {
+        cursor: pointer;
+        width: 16px;
+        height: 16px;
+      }
+
+      .mode-option label {
+        cursor: pointer;
+        margin-bottom: 0;
+        color: #fff;
+        font-size: 0.9em;
       }
 
       .panel-title {
@@ -2179,12 +2214,19 @@
         <!-- Mode Toggle in Selector Panel -->
         <div class="editor-panel" v-if="selectedInvoiceId" style="padding: 0.5em 1em;">
           <div class="selector-row" style="justify-content: space-between;">
-            <div class="selector-group">
-              <label>View Mode</label>
-              <select v-model="editMode">
-                <option value="preview">Preview (Print Ready)</option>
-                <option value="edit">Edit Invoice</option>
-              </select>
+            <div class="mode-selector">
+              <div class="mode-option">
+                <input type="radio" id="mode-edit" value="edit" v-model="editMode">
+                <label for="mode-edit">Edit Quote/Invoice</label>
+              </div>
+              <div class="mode-option">
+                <input type="radio" id="mode-preview" value="preview" v-model="editMode">
+                <label for="mode-preview">Print Quote/Invoice</label>
+              </div>
+              <div class="mode-option">
+                <input type="radio" id="mode-worksheet" value="worksheet" v-model="editMode">
+                <label for="mode-worksheet">Print Crew Worksheet</label>
+              </div>
             </div>
             <div style="display: flex; align-items: center; gap: 1em;">
               <span v-if="saveStatus" :class="['save-status', saveStatus]">
@@ -2352,7 +2394,7 @@
       </template>
 
       <!-- ==================== PREVIEW MODE ==================== -->
-      <div class="invoice-content" v-else>
+      <div class="invoice-content" v-else-if="editMode === 'preview'">
         <template v-if="invoice.Invoicer && invoice.Invoicer.Name === 'Stroikos Services'">
           <div class="letterhead">
             <img class="logo" src="https://stroikos.com/wp-content/uploads/2024/10/Stroikos-services-logo.png" alt="Stroikos Logo">
@@ -2500,6 +2542,102 @@
           <a href="javascript:window.print()">Print</a>
         </div>
       </div><!-- end invoice-content -->
+
+      <!-- ==================== CREW WORKSHEET MODE ==================== -->
+      <div class="invoice-content" v-else-if="editMode === 'worksheet'">
+        <template v-if="invoice.Invoicer && invoice.Invoicer.Name === 'Stroikos Services'">
+          <div class="letterhead">
+            <img class="logo" src="https://stroikos.com/wp-content/uploads/2024/10/Stroikos-services-logo.png" alt="Stroikos Logo">
+            <div class="letterhead-text">
+              <div class="company-name">Stroikos Services — Tree Care</div>
+              <div class="company-details">Arbores amamus</div>
+            </div>
+          </div>
+        </template>
+        <template v-else-if="invoice.Invoicer && invoice.Invoicer.Name === 'A Stump Man'">
+          <div class="stump-man-container">
+            <div class="stump-man-header">A STUMP MAN</div>
+            <img class="stump-man-logo" src="https://stroikos.com/wp-content/uploads/2025/06/A-Stump-Man-Logo.jpg" alt="A Stump Man Logo">
+          </div>
+        </template>
+
+        <div style="text-align: center; font-size: 1.5em; font-weight: bold; margin-bottom: 1em;">
+          CREW WORKSHEET
+        </div>
+
+        <div class="top">
+          <div class="supplier">
+            <div class="address-title">Client</div>
+            <div v-for="business in (invoice.Client ? [invoice.Client] : [])">
+              <template v-if="typeof(business) === 'string'">
+                <div class="address newlined">{{ business }}</div>
+              </template>
+              <template v-else>
+                <div class="address">
+                  <span class="name">{{ business.First }} {{ business.Last }}</span><br />
+                  {{ business.Street1 }}<br />
+                  <template v-if="business.Street2">
+                    {{ business.Street2 }}<br />
+                  </template>
+                  {{ business.City }} {{ business.State }} {{ business.Zip }}<br />
+                </div>
+              </template>
+              <div class="invoice-meta">
+                <div v-if="invoice.Invoice ? invoice.Issued : invoice.Quote_Date"><strong>Date:</strong> {{ (invoice.Invoice ? invoice.Issued : invoice.Quote_Date) | asDate }}</div>
+                <div v-if="invoice.Number"><strong>{{ invoice.Invoice ? 'Invoice' : 'Quote' }} #:</strong> {{ invoice.Number }}</div>
+              </div>
+            </div>
+          </div>
+
+          <template v-if="invoice.Invoicer && invoice.Invoicer.Name === 'Stroikos Services'">
+            <div class="supplier">
+              <div class="address-title">From</div>
+              <div v-for="business in (invoice.Invoicer ? [invoice.Invoicer] : [])">
+                <template v-if="typeof(business) === 'string'">
+                  <div class="address newlined">{{ business }}</div>
+                </template>
+                <template v-else>
+                  <div class="address">
+                    <span class="name">{{ business.Name }}</span><br />
+                    {{ business.Street1 }}<br />
+                    <template v-if="business.Street2">
+                      {{ business.Street2 }}<br />
+                    </template>
+                    {{ business.City }} {{ business.State }} {{ business.Zip }}<br />
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Crew Hours Table -->
+        <table class="items" style="margin-top: 2em;">
+          <tr>
+            <th>Task Description</th>
+            <th class="number">Tree Crew Hours</th>
+            <th class="number">Ground Crew Hours</th>
+            <th class="number">Total Crew Hours</th>
+          </tr>
+          <tr v-for="(item, index) in invoice.Items">
+            <td>{{ item.Description || [item.Task_Description_Start, [item.Tree_Kind, item.Task_Descriptions].filter(Boolean).join('')].filter(Boolean).join(' ') }}</td>
+            <td class="number">{{ (item.Tree_Crew_Hours || 0).toFixed(2) }}</td>
+            <td class="number">{{ (item.Ground_Crew_Hours || 0).toFixed(2) }}</td>
+            <td class="number">{{ (item.Total_Crew_Hours || 0).toFixed(2) }}</td>
+          </tr>
+          <tr class="total-row">
+            <td class="total-label">Total Hours</td>
+            <td class="number"><strong>{{ invoice.Items.reduce((sum, item) => sum + (Number(item.Tree_Crew_Hours) || 0), 0).toFixed(2) }}</strong></td>
+            <td class="number"><strong>{{ invoice.Items.reduce((sum, item) => sum + (Number(item.Ground_Crew_Hours) || 0), 0).toFixed(2) }}</strong></td>
+            <td class="number"><strong>{{ invoice.Items.reduce((sum, item) => sum + (Number(item.Total_Crew_Hours) || 0), 0).toFixed(2) }}</strong></td>
+          </tr>
+        </table>
+
+        <div class="print">
+          <a href="javascript:window.print()">Print</a>
+        </div>
+      </div><!-- end crew worksheet -->
+
       </template>
 
       <!-- Tree Item Modal -->
