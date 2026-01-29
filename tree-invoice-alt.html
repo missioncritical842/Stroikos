@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.47 (Direct API)</title>
+    <title>Tree Invoice Alt v1.48 (Direct API)</title>
 
     <style>
       body {
@@ -551,20 +551,25 @@
       }
 
       .selector-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1em;
-        align-items: flex-end;
+        display: grid;
+        grid-template-columns: auto auto auto;
+        grid-template-rows: auto auto;
+        gap: 0 1em;
+        align-items: end;
       }
 
       .selector-group {
-        display: flex;
-        flex-direction: column;
+        display: contents;
       }
 
       .selector-group label {
+        grid-row: 1;
         min-height: 1.2em;
         line-height: 1.2em;
+      }
+
+      .selector-group > div {
+        grid-row: 2;
       }
 
       .create-btn {
