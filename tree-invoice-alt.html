@@ -439,6 +439,7 @@
 
       .selector-panel {
         background: #333;
+        padding-bottom: 1.5em;
       }
 
       .editor-panel {
@@ -2312,7 +2313,7 @@
                 </div>
               </div>
             </div>
-            <div class="selector-group" style="margin-left: 0.5em;">
+            <div class="selector-group" style="margin-left: 1.2em; margin-top: 0.3em;">
               <label style="margin-bottom: 0.25em;">Invoice/Quote</label>
               <select @change="onInvoiceSelected" :value="selectedInvoiceId" :disabled="!selectedClientId" style="padding: 0.5em; font-size: 1em;">
                 <option value="">-- Select Invoice --</option>
