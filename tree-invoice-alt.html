@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.41 (Direct API)</title>
+    <title>Tree Invoice Alt v1.43 (Direct API)</title>
 
     <style>
       body {
@@ -2313,8 +2313,8 @@
                 </div>
               </div>
             </div>
-            <div class="selector-group" style="margin-left: 1.2em; margin-top: 0.3em;">
-              <label style="margin-bottom: 0.25em;">Invoice/Quote</label>
+            <div class="selector-group">
+              <label>Invoice/Quote</label>
               <select @change="onInvoiceSelected" :value="selectedInvoiceId" :disabled="!selectedClientId" style="padding: 0.5em; font-size: 1em;">
                 <option value="">-- Select Invoice --</option>
                 <option v-for="inv in invoicesForClient" :key="inv.id" :value="inv.id">
