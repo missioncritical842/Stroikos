@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.48 (Direct API)</title>
+    <title>Tree Invoice Alt v1.49 (Direct API)</title>
 
     <style>
       body {
@@ -1143,7 +1143,8 @@
       Location_Diffifulty: null,
       Drop_Zone_Diffifculty: null,
       Deferred_Maintenance_Difficulty: null,
-      Crew_Hour_Rate: null
+      Crew_Hour_Rate: null,
+      InvoiceStatus: null
     };
 
     // Parse Grist's encoded list format: ["L", ["O", {...}], ["O", {...}]]
@@ -1215,7 +1216,8 @@
           locationDiffTable,
           dropZoneDiffTable,
           deferredMaintenanceTable,
-          crewTable
+          crewTable,
+          invoiceStatusTable
         ] = await Promise.all([
           grist.docApi.fetchTable('Clients'),
           grist.docApi.fetchTable('Invoicer'),
@@ -1227,7 +1229,8 @@
           grist.docApi.fetchTable('Location_Diffifulty'),
           grist.docApi.fetchTable('Drop_Zone_Diffifculty'),
           grist.docApi.fetchTable('Deferred_Maintenance_Difficulty'),
-          grist.docApi.fetchTable('Crew_Hour_Rate')
+          grist.docApi.fetchTable('Crew_Hour_Rate'),
+          grist.docApi.fetchTable('InvoiceStatus')
         ]);
 
         tableCache.Clients = tableToRows(clientsTable);
@@ -1241,6 +1244,7 @@
         tableCache.Drop_Zone_Diffifculty = tableToRows(dropZoneDiffTable);
         tableCache.Deferred_Maintenance_Difficulty = tableToRows(deferredMaintenanceTable);
         tableCache.Crew_Hour_Rate = tableToRows(crewTable);
+        tableCache.InvoiceStatus = tableToRows(invoiceStatusTable);
 
         console.log('Tables fetched:', {
           Clients: tableCache.Clients.length,
@@ -1366,8 +1370,10 @@
       selectedInvoicerId: null,
       selectedClientId: null,
       selectedInvoiceId: null,
+      selectedStatus: null,
       invoicers: [],
       clients: [],
+      statuses: [],
       clientSearch: '',
       showClientDropdown: false,
       invoicesForClient: [],
@@ -1498,6 +1504,20 @@
         .sort((a, b) => a.name.localeCompare(b.name));
 
       data.invoicers = allInvoicers;
+    }
+
+    // Populate the status selector
+    function populateStatusSelector() {
+      if (!tableCache.InvoiceStatus) return;
+
+      // Show all statuses
+      const allStatuses = tableCache.InvoiceStatus
+        .map(s => ({
+          id: s.id,
+          name: s.Status || `Status #${s.id}`
+        }));
+
+      data.statuses = allStatuses;
     }
 
     // Populate client selector with all clients
@@ -1918,6 +1938,7 @@
         await fetchAllTables();
         populateClientSelector();
         populateInvoicerSelector();
+        populateStatusSelector();
 
         // Re-filter invoices for this client
         const invoices = tableCache.Invoices2
@@ -1995,6 +2016,46 @@
       }
     }
 
+    // Update the status on the current invoice in Grist
+    async function onStatusChanged(statusId) {
+      if (!data.invoice || !data.invoice.id) {
+        console.warn('No invoice selected to update');
+        return;
+      }
+
+      data.selectedStatus = statusId;
+
+      if (!statusId) {
+        return;
+      }
+
+      try {
+        data.status = 'Updating status...';
+
+        // Update the invoice record in Grist
+        await grist.docApi.applyUserActions([
+          ['UpdateRecord', 'Invoices2', data.invoice.id, { Status: statusId }]
+        ]);
+
+        // Update local cache
+        const cachedInvoice = findById(tableCache.Invoices2, data.invoice.id);
+        if (cachedInvoice) {
+          cachedInvoice.Status = statusId;
+        }
+
+        // Rebuild the invoice display
+        const invoice = buildInvoiceFromRow(data.invoice.id);
+        data.invoice = invoice;
+        window.invoice = invoice;
+
+        data.status = '';
+        console.log('Status updated to:', statusId);
+      } catch (err) {
+        console.error('Failed to update status:', err);
+        data.status = 'Failed to update status: ' + err.message;
+      }
+    }
+
     // Load invoice when selected from dropdown
     function onInvoiceSelected(invoiceId) {
       data.selectedInvoiceId = invoiceId;
@@ -2014,6 +2075,14 @@
         // Set the invoicer selector to the invoice's current invoicer
         if (invoice.Invoicer && invoice.Invoicer.id) {
           data.selectedInvoicerId = invoice.Invoicer.id;
+        }
+
+        // Set the status selector to the invoice's current status
+        const invoiceRow = findById(tableCache.Invoices2, parseInt(invoiceId));
+        if (invoiceRow && invoiceRow.Status) {
+          data.selectedStatus = invoiceRow.Status;
+        } else {
+          data.selectedStatus = null;
         }
       } catch (err) {
         handleError(err);
@@ -2037,6 +2106,7 @@
         // Populate selectors
         populateClientSelector();
         populateInvoicerSelector();
+        populateStatusSelector();
 
         // Restore selections
         data.selectedClientId = savedClientId;
@@ -2081,6 +2151,7 @@
         data.tablesLoaded = true;
         populateClientSelector();
         populateInvoicerSelector();
+        populateStatusSelector();
         data.status = '';
       } catch (err) {
         handleError(err);
@@ -2126,6 +2197,9 @@
           },
           onInvoicerChanged: function(event) {
             onInvoicerChanged(event.target.value ? parseInt(event.target.value) : null);
+          },
+          onStatusChanged: function(event) {
+            onStatusChanged(event.target.value ? parseInt(event.target.value) : null);
           },
           createNewInvoice: function() {
             createNewInvoice();
@@ -2346,6 +2420,34 @@
           </div>
         </div>
 
+        <!-- Invoicer and Status Panel -->
+        <div class="editor-panel" v-if="selectedInvoiceId" style="padding: 0.5em 1em;">
+          <div class="selector-row">
+            <div class="selector-group">
+              <label>Invoicer</label>
+              <div style="position: relative;">
+                <select @change="onInvoicerChanged" :value="selectedInvoicerId" style="padding: 0.5em; font-size: 1em; border: 1px solid #ccc; border-radius: 4px; min-width: 200px; box-sizing: border-box; width: 100%;">
+                  <option value="">-- Select Invoicer --</option>
+                  <option v-for="invoicer in invoicers" :key="invoicer.id" :value="invoicer.id">
+                    {{ invoicer.name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+            <div class="selector-group">
+              <label>Status</label>
+              <div style="position: relative;">
+                <select @change="onStatusChanged" :value="selectedStatus" style="padding: 0.5em; font-size: 1em; border: 1px solid #ccc; border-radius: 4px; min-width: 200px; box-sizing: border-box; width: 100%;">
+                  <option value="">-- Select Status --</option>
+                  <option v-for="status in statuses" :key="status.id" :value="status.id">
+                    {{ status.name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Mode Toggle in Selector Panel -->
         <div class="editor-panel" v-if="selectedInvoiceId" style="padding: 0.5em 1em;">
           <div class="selector-row" style="justify-content: space-between;">
@@ -2399,17 +2501,6 @@
           </div>
         </div>
         <div class="editable-invoice">
-          <!-- Invoicer Selection -->
-          <div style="margin-bottom: 1em; padding-bottom: 1em; border-bottom: 1px dashed #ccc;">
-            <span class="edit-label">Invoicer:</span>
-            <select @change="onInvoicerChanged" :value="selectedInvoicerId" style="padding: 0.25em; font-size: 1em;">
-              <option value="">-- Select Invoicer --</option>
-              <option v-for="invoicer in invoicers" :key="invoicer.id" :value="invoicer.id">
-                {{ invoicer.name }}
-              </option>
-            </select>
-          </div>
-
           <!-- Header (same as preview) -->
           <template v-if="invoice.Invoicer && invoice.Invoicer.Name === 'Stroikos Services'">
             <div class="letterhead">
