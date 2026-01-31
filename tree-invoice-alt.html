@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.61 (Direct API)</title>
+    <title>Tree Invoice Alt v1.62 (Direct API)</title>
 
     <style>
       body {
@@ -1682,8 +1682,11 @@
         Number: invoice.Number,
         Issued: invoice.Issued,
         Due: invoice.Due,
+        Quote_Date: invoice.Quote_Date,
         Invoice: invoice.Invoice,
         Status: invoice.Status,
+        QuoteNote: invoice.QuoteNote,
+        InvoiceNote: invoice.InvoiceNote,
         Client: {
           id: invoice.Client.id,
           First: invoice.Client.First,
