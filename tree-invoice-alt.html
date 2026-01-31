@@ -1803,8 +1803,10 @@
         CalcPrice: calcPrice
       };
 
-      // Auto-update price to match calculated price when tree details change
-      data.newTreeForm.Price = calcPrice;
+      // Auto-populate price if not set
+      if (form.Price === null || form.Price === 0) {
+        data.newTreeForm.Price = calcPrice;
+      }
     }
 
     // Submit tree form (create or update)
