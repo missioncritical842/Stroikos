@@ -246,17 +246,14 @@
       <!-- Header -->
       <div class="header">
         <div>
-          <img v-if="invoice.Invoicer.LogoURL"
-               :src="invoice.Invoicer.LogoURL"
-               alt="Company Logo"
-               class="logo">
+          <!-- Logo placeholder - add logo URL to Invoicer table if needed -->
         </div>
         <div class="company-info">
           <div class="company-name">{{ invoice.Invoicer.Name }}</div>
           <div class="company-details">
             <div>{{ invoice.Invoicer.First }} {{ invoice.Invoicer.Last }}</div>
-            <div>{{ invoice.Invoicer.Address }}</div>
-            <div v-if="invoice.Invoicer.Address2">{{ invoice.Invoicer.Address2 }}</div>
+            <div>{{ invoice.Invoicer.Street1 }}</div>
+            <div v-if="invoice.Invoicer.Street2">{{ invoice.Invoicer.Street2 }}</div>
             <div>{{ invoice.Invoicer.City }}, {{ invoice.Invoicer.State }} {{ invoice.Invoicer.Zip }}</div>
             <div>{{ invoice.Invoicer.Email }}</div>
             <div>{{ invoice.Invoicer.Phone }}</div>
@@ -273,10 +270,9 @@
       <div class="info-section">
         <div class="info-block">
           <h3>Bill To</h3>
-          <p><strong>{{ invoice.Client.Name }}</strong></p>
-          <p>{{ invoice.Client.First }} {{ invoice.Client.Last }}</p>
-          <p>{{ invoice.Client.Address }}</p>
-          <p v-if="invoice.Client.Address2">{{ invoice.Client.Address2 }}</p>
+          <p><strong>{{ invoice.Client.First }} {{ invoice.Client.Last }}</strong></p>
+          <p>{{ invoice.Client.Street1 }}</p>
+          <p v-if="invoice.Client.Street2">{{ invoice.Client.Street2 }}</p>
           <p>{{ invoice.Client.City }}, {{ invoice.Client.State }} {{ invoice.Client.Zip }}</p>
           <p>{{ invoice.Client.Email }}</p>
           <p>{{ invoice.Client.Phone }}</p>
@@ -447,9 +443,9 @@
 
             // Set content based on type
             if (this.documentType === 'quote') {
-              this.content = this.invoice.QuoteContent || '';
+              this.content = this.invoice.FinalQuoteText || '';
             } else {
-              this.content = this.invoice.InvoiceContent || '';
+              this.content = this.invoice.FinalInvoiceText || '';
             }
 
             this.loading = false;

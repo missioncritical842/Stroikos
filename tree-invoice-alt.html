@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.57 (Direct API)</title>
+    <title>Tree Invoice Alt v1.58 (Direct API)</title>
 
     <style>
       body {
@@ -1422,6 +1422,7 @@
         FinalQuoteText: invoiceRow.FinalQuoteText,
         FinalInvoiceText: invoiceRow.FinalInvoiceText,
         Invoice: invoiceRow.Invoice,
+        Status: invoiceRow.Status,
         Total: invoiceRow.Total,
 
         // Nested Client object
@@ -1685,13 +1686,12 @@
         Status: invoice.Status,
         Client: {
           id: invoice.Client.id,
-          Name: invoice.Client.Name,
           First: invoice.Client.First,
           Last: invoice.Client.Last,
           Email: invoice.Client.Email,
           Phone: invoice.Client.Phone,
-          Address: invoice.Client.Address,
-          Address2: invoice.Client.Address2,
+          Street1: invoice.Client.Street1,
+          Street2: invoice.Client.Street2,
           City: invoice.Client.City,
           State: invoice.Client.State,
           Zip: invoice.Client.Zip
@@ -1703,12 +1703,12 @@
           Last: invoice.Invoicer.Last,
           Email: invoice.Invoicer.Email,
           Phone: invoice.Invoicer.Phone,
-          Address: invoice.Invoicer.Address,
-          Address2: invoice.Invoicer.Address2,
+          Street1: invoice.Invoicer.Street1,
+          Street2: invoice.Invoicer.Street2,
           City: invoice.Invoicer.City,
           State: invoice.Invoicer.State,
           Zip: invoice.Invoicer.Zip,
-          LogoURL: invoice.Invoicer.LogoURL
+          Website: invoice.Invoicer.Website
         },
         Items: invoice.Items.map(item => ({
           id: item.id,
@@ -1720,8 +1720,8 @@
           Price: item.Price
         })),
         Total: invoice.Total,
-        QuoteContent: invoice.QuoteContent,
-        InvoiceContent: invoice.InvoiceContent
+        FinalQuoteText: invoice.FinalQuoteText,
+        FinalInvoiceText: invoice.FinalInvoiceText
       };
     }
 
