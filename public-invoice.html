@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Quote/Invoice - Stroikos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 40px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #2a7a2a;
+    }
+
+    .logo {
+      max-width: 200px;
+      max-height: 100px;
+    }
+
+    .company-info {
+      text-align: right;
+    }
+
+    .company-name {
+      font-size: 24px;
+      font-weight: bold;
+      color: #2a7a2a;
+      margin-bottom: 10px;
+    }
+
+    .company-details {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .invoice-title {
+      font-size: 32px;
+      font-weight: bold;
+      color: #2a7a2a;
+      margin-bottom: 30px;
+    }
+
+    .info-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+
+    .info-block h3 {
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #2a7a2a;
+      margin-bottom: 10px;
+    }
+
+    .info-block p {
+      margin: 5px 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 30px 0;
+    }
+
+    .items-table th {
+      background: #2a7a2a;
+      color: white;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .items-table td {
+      padding: 12px;
+      border-bottom: 1px solid #e0e0e0;
+      font-size: 14px;
+    }
+
+    .items-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .total-row {
+      background: #f9f9f9;
+    }
+
+    .total-row td {
+      font-weight: bold;
+      font-size: 16px;
+      padding-top: 20px;
+      border-top: 2px solid #2a7a2a;
+    }
+
+    .text-right {
+      text-align: right;
+    }
+
+    .content-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 4px;
+      line-height: 1.8;
+    }
+
+    .signature-section {
+      margin-top: 40px;
+      padding: 30px;
+      background: #f0f9f0;
+      border: 2px solid #2a7a2a;
+      border-radius: 8px;
+    }
+
+    .signature-section h3 {
+      color: #2a7a2a;
+      margin-bottom: 20px;
+    }
+
+    .signature-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group label {
+      font-weight: 600;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+
+    .form-group input {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .signature-btn {
+      background: #2a7a2a;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .signature-btn:hover:not(:disabled) {
+      background: #3a9a3a;
+    }
+
+    .signature-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .error-message {
+      background: #fee;
+      color: #c33;
+      padding: 20px;
+      border-radius: 4px;
+      margin: 20px 0;
+    }
+
+    .loading-message {
+      text-align: center;
+      padding: 40px;
+      font-size: 18px;
+      color: #666;
+    }
+
+    .success-message {
+      background: #e8f5e9;
+      color: #2a7a2a;
+      padding: 20px;
+      border-radius: 4px;
+      margin: 20px 0;
+      font-weight: 600;
+    }
+
+    @media print {
+      body {
+        background: white;
+      }
+      .container {
+        box-shadow: none;
+      }
+      .signature-section {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Loading State -->
+    <div v-if="loading" class="loading-message">
+      Loading...
+    </div>
+
+    <!-- Error State -->
+    <div v-if="error" class="error-message">
+      {{ error }}
+    </div>
+
+    <!-- Invoice Display -->
+    <div v-if="invoice && !error" class="container">
+      <!-- Header -->
+      <div class="header">
+        <div>
+          <img v-if="invoice.Invoicer.LogoURL"
+               :src="invoice.Invoicer.LogoURL"
+               alt="Company Logo"
+               class="logo">
+        </div>
+        <div class="company-info">
+          <div class="company-name">{{ invoice.Invoicer.Name }}</div>
+          <div class="company-details">
+            <div>{{ invoice.Invoicer.First }} {{ invoice.Invoicer.Last }}</div>
+            <div>{{ invoice.Invoicer.Address }}</div>
+            <div v-if="invoice.Invoicer.Address2">{{ invoice.Invoicer.Address2 }}</div>
+            <div>{{ invoice.Invoicer.City }}, {{ invoice.Invoicer.State }} {{ invoice.Invoicer.Zip }}</div>
+            <div>{{ invoice.Invoicer.Email }}</div>
+            <div>{{ invoice.Invoicer.Phone }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Title -->
+      <h1 class="invoice-title">
+        {{ documentType === 'quote' ? 'Quote' : 'Invoice' }} #{{ invoice.Number }}
+      </h1>
+
+      <!-- Info Section -->
+      <div class="info-section">
+        <div class="info-block">
+          <h3>Bill To</h3>
+          <p><strong>{{ invoice.Client.Name }}</strong></p>
+          <p>{{ invoice.Client.First }} {{ invoice.Client.Last }}</p>
+          <p>{{ invoice.Client.Address }}</p>
+          <p v-if="invoice.Client.Address2">{{ invoice.Client.Address2 }}</p>
+          <p>{{ invoice.Client.City }}, {{ invoice.Client.State }} {{ invoice.Client.Zip }}</p>
+          <p>{{ invoice.Client.Email }}</p>
+          <p>{{ invoice.Client.Phone }}</p>
+        </div>
+        <div class="info-block">
+          <h3>{{ documentType === 'quote' ? 'Quote' : 'Invoice' }} Details</h3>
+          <p><strong>{{ documentType === 'quote' ? 'Quote' : 'Invoice' }} Number:</strong> {{ invoice.Number }}</p>
+          <p><strong>Date Issued:</strong> {{ formatDate(invoice.Issued) }}</p>
+          <p v-if="documentType === 'invoice' && invoice.Due">
+            <strong>Due Date:</strong> {{ formatDate(invoice.Due) }}
+          </p>
+        </div>
+      </div>
+
+      <!-- Items Table -->
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th class="text-right">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in invoice.Items" :key="item.id">
+            <td>
+              <div><strong>{{ item.Task }}</strong></div>
+              <div style="color: #666; font-size: 13px;">
+                {{ item.Tree_Kind }} - {{ item.Height_ft_ }}ft, {{ item.DBH_in }}" DBH
+              </div>
+              <div v-if="item.Description" style="margin-top: 5px; font-size: 13px;">
+                {{ item.Description }}
+              </div>
+            </td>
+            <td class="text-right">{{ formatCurrency(item.Price) }}</td>
+          </tr>
+          <tr class="total-row">
+            <td class="text-right"><strong>Total:</strong></td>
+            <td class="text-right">{{ formatCurrency(invoice.Total) }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Content Section -->
+      <div v-if="content" class="content-section" v-html="content"></div>
+
+      <!-- Signature Section (Quotes Only) -->
+      <div v-if="documentType === 'quote' && !signatureSubmitted && !alreadySigned" class="signature-section">
+        <h3>Accept This Quote</h3>
+        <p>By signing below, you accept the terms and pricing outlined in this quote.</p>
+
+        <form @submit.prevent="submitSignature" class="signature-form">
+          <div class="form-group">
+            <label for="signatureName">Full Name *</label>
+            <input
+              id="signatureName"
+              v-model="signatureName"
+              type="text"
+              required
+              placeholder="Enter your full name">
+          </div>
+
+          <div class="form-group">
+            <label for="signatureEmail">Email *</label>
+            <input
+              id="signatureEmail"
+              v-model="signatureEmail"
+              type="email"
+              required
+              placeholder="your@email.com">
+          </div>
+
+          <button type="submit" class="signature-btn" :disabled="submitting">
+            {{ submitting ? 'Submitting...' : 'Accept Quote' }}
+          </button>
+        </form>
+      </div>
+
+      <!-- Already Signed Message -->
+      <div v-if="alreadySigned" class="success-message">
+        This quote has already been accepted.
+      </div>
+
+      <!-- Signature Submitted Message -->
+      <div v-if="signatureSubmitted" class="success-message">
+        Thank you! Your acceptance has been recorded. We will contact you shortly to schedule the work.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Grist API configuration
+    const GRIST_DOC_ID = '8ApvMNhvYqr8R8A2NA1fdD';
+    const GRIST_API_KEY = 'f26ac57c1e1095b4b67a3d4e03e5f06f7c04c21d'; // Read-only public key
+    const GRIST_SERVER = 'https://grist.stroikos.com';
+
+    new Vue({
+      el: '#app',
+      data: {
+        loading: true,
+        error: null,
+        invoice: null,
+        documentType: null,
+        hash: null,
+        snapshotId: null,
+        signatureName: '',
+        signatureEmail: '',
+        submitting: false,
+        signatureSubmitted: false,
+        alreadySigned: false,
+        content: ''
+      },
+      mounted() {
+        this.loadInvoice();
+      },
+      methods: {
+        async loadInvoice() {
+          try {
+            // Parse URL parameters
+            const params = new URLSearchParams(window.location.search);
+            this.documentType = params.get('type');
+            this.hash = params.get('hash');
+
+            if (!this.documentType || !this.hash) {
+              throw new Error('Invalid link: Missing type or hash parameter');
+            }
+
+            if (this.documentType !== 'quote' && this.documentType !== 'invoice') {
+              throw new Error('Invalid document type');
+            }
+
+            // Fetch the snapshot from Grist
+            const response = await fetch(
+              `${GRIST_SERVER}/api/docs/${GRIST_DOC_ID}/tables/PublicInvoiceSnapshots/records`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${GRIST_API_KEY}`
+                }
+              }
+            );
+
+            if (!response.ok) {
+              throw new Error('Failed to load data from server');
+            }
+
+            const data = await response.json();
+
+            // Find the snapshot with matching hash
+            const snapshot = data.records.find(r => r.fields.hash === this.hash);
+
+            if (!snapshot) {
+              throw new Error('Quote/Invoice not found. The link may be invalid or expired.');
+            }
+
+            if (!snapshot.fields.is_active) {
+              throw new Error('This link has been deactivated.');
+            }
+
+            // Store snapshot ID for signature submission
+            this.snapshotId = snapshot.id;
+
+            // Check if already signed
+            if (snapshot.fields.signature_data) {
+              this.alreadySigned = true;
+            }
+
+            // Parse the invoice data
+            this.invoice = JSON.parse(snapshot.fields.invoice_data);
+
+            // Set content based on type
+            if (this.documentType === 'quote') {
+              this.content = this.invoice.QuoteContent || '';
+            } else {
+              this.content = this.invoice.InvoiceContent || '';
+            }
+
+            this.loading = false;
+          } catch (err) {
+            console.error('Error loading invoice:', err);
+            this.error = err.message;
+            this.loading = false;
+          }
+        },
+
+        async submitSignature() {
+          if (!this.signatureName || !this.signatureEmail) {
+            alert('Please fill in all required fields');
+            return;
+          }
+
+          try {
+            this.submitting = true;
+
+            const signatureData = {
+              name: this.signatureName,
+              email: this.signatureEmail,
+              timestamp: Math.floor(Date.now() / 1000),
+              userAgent: navigator.userAgent
+            };
+
+            // Update the snapshot record with signature data
+            const updateResponse = await fetch(
+              `${GRIST_SERVER}/api/docs/${GRIST_DOC_ID}/tables/PublicInvoiceSnapshots/records`,
+              {
+                method: 'PATCH',
+                headers: {
+                  'Authorization': `Bearer ${GRIST_API_KEY}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  records: [
+                    {
+                      id: this.snapshotId,
+                      fields: {
+                        signature_data: JSON.stringify(signatureData),
+                        signed_date: signatureData.timestamp
+                      }
+                    }
+                  ]
+                })
+              }
+            );
+
+            if (!updateResponse.ok) {
+              throw new Error('Failed to save signature');
+            }
+
+            // Update the invoice status to "Quote Accepted" (status 3)
+            const statusResponse = await fetch(
+              `${GRIST_SERVER}/api/docs/${GRIST_DOC_ID}/tables/Invoices2/records`,
+              {
+                method: 'PATCH',
+                headers: {
+                  'Authorization': `Bearer ${GRIST_API_KEY}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  records: [
+                    {
+                      id: this.invoice.id,
+                      fields: {
+                        Status: 3
+                      }
+                    }
+                  ]
+                })
+              }
+            );
+
+            if (!statusResponse.ok) {
+              console.error('Failed to update invoice status');
+            }
+
+            this.signatureSubmitted = true;
+            this.submitting = false;
+          } catch (err) {
+            console.error('Error submitting signature:', err);
+            alert('Failed to submit signature. Please try again or contact us directly.');
+            this.submitting = false;
+          }
+        },
+
+        formatDate(timestamp) {
+          if (!timestamp) return '—';
+          const date = new Date(timestamp * 1000);
+          return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+        },
+
+        formatCurrency(value) {
+          if (typeof value !== 'number') return '—';
+          return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD'
+          }).format(value);
+        }
+      }
+    });
+  </script>
+</body>
+</html>

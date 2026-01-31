@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Tree Invoice Alt v1.54 (Direct API)</title>
+    <title>Tree Invoice Alt v1.57 (Direct API)</title>
 
     <style>
       body {
@@ -548,6 +548,110 @@
         margin-bottom: 0.5em;
         border: none;
         border-radius: 4px;
+      }
+
+      /* Workflow Panel Styles */
+      .workflow-panel {
+        background: #2563eb;
+        color: white;
+        padding: 1em;
+        margin: 1em 0;
+        border-radius: 4px;
+      }
+
+      .workflow-status-badge {
+        display: inline-block;
+        padding: 0.5em 1em;
+        border-radius: 4px;
+        font-weight: bold;
+        margin-bottom: 1em;
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      .workflow-status-badge.status-1 { background: #94a3b8; }
+      .workflow-status-badge.status-2 { background: #3b82f6; }
+      .workflow-status-badge.status-3 { background: #10b981; }
+      .workflow-status-badge.status-6 { background: #f59e0b; }
+      .workflow-status-badge.status-7 { background: #22c55e; }
+
+      .workflow-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75em;
+      }
+
+      .workflow-btn {
+        background: white;
+        color: #2563eb;
+        border: 2px solid white;
+        padding: 0.6em 1em;
+        font-size: 1em;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+
+      .workflow-btn:hover:not(:disabled) {
+        background: #f8fafc;
+        transform: translateY(-1px);
+      }
+
+      .workflow-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .workflow-link-display {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.75em;
+        border-radius: 4px;
+        margin: 0.5em 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+      }
+
+      .workflow-link-text {
+        flex: 1;
+        font-family: monospace;
+        font-size: 0.9em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .workflow-copy-btn {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 1px solid white;
+        padding: 0.4em 0.8em;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9em;
+        white-space: nowrap;
+      }
+
+      .workflow-copy-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      .workflow-copy-btn.copied {
+        background: #10b981;
+        border-color: #10b981;
+      }
+
+      .workflow-signature-info {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.75em;
+        border-radius: 4px;
+        margin: 0.5em 0;
+        font-size: 0.9em;
+      }
+
+      .workflow-signature-info strong {
+        display: block;
+        margin-bottom: 0.25em;
       }
 
       .selector-row {
@@ -1144,7 +1248,8 @@
       Drop_Zone_Diffifculty: null,
       Deferred_Maintenance_Difficulty: null,
       Crew_Hour_Rate: null,
-      InvoiceStatus: null
+      InvoiceStatus: null,
+      PublicInvoiceSnapshots: null
     };
 
     // Parse Grist's encoded list format: ["L", ["O", {...}], ["O", {...}]]
@@ -1217,7 +1322,8 @@
           dropZoneDiffTable,
           deferredMaintenanceTable,
           crewTable,
-          invoiceStatusTable
+          invoiceStatusTable,
+          publicSnapshotsTable
         ] = await Promise.all([
           grist.docApi.fetchTable('Clients'),
           grist.docApi.fetchTable('Invoicer'),
@@ -1230,7 +1336,8 @@
           grist.docApi.fetchTable('Drop_Zone_Diffifculty'),
           grist.docApi.fetchTable('Deferred_Maintenance_Difficulty'),
           grist.docApi.fetchTable('Crew_Hour_Rate'),
-          grist.docApi.fetchTable('InvoiceStatus')
+          grist.docApi.fetchTable('InvoiceStatus'),
+          grist.docApi.fetchTable('PublicInvoiceSnapshots')
         ]);
 
         tableCache.Clients = tableToRows(clientsTable);
@@ -1245,6 +1352,7 @@
         tableCache.Deferred_Maintenance_Difficulty = tableToRows(deferredMaintenanceTable);
         tableCache.Crew_Hour_Rate = tableToRows(crewTable);
         tableCache.InvoiceStatus = tableToRows(invoiceStatusTable);
+        tableCache.PublicInvoiceSnapshots = tableToRows(publicSnapshotsTable);
 
         console.log('Tables fetched:', {
           Clients: tableCache.Clients.length,
@@ -1407,7 +1515,13 @@
         Ground_Crew_Hours: 0,
         Total_Crew_Hours: 0,
         CalcPrice: 0
-      }
+      },
+      // Workflow state
+      generatingLink: false,
+      currentPublicLink: null,
+      linkCopied: false,
+      quoteSignatureInfo: null,
+      publicSnapshots: []
     };
     let app = undefined;
 
@@ -1519,6 +1633,296 @@
 
       data.statuses = allStatuses;
     }
+
+    // ===== WORKFLOW FUNCTIONS =====
+
+    // Get status name from ID
+    function getStatusName(statusId) {
+      if (!tableCache.InvoiceStatus || !statusId) return '';
+      const status = tableCache.InvoiceStatus.find(s => s.id === statusId);
+      return status ? status.Status : '';
+    }
+
+    // Get CSS class for status badge
+    function getStatusClass(statusId) {
+      return `status-${statusId}`;
+    }
+
+    // Format timestamp for display
+    function formatTimestamp(timestamp) {
+      if (!timestamp) return '';
+      const date = new Date(timestamp * 1000);
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // Generate a unique hash for public links
+    function generateUniqueHash() {
+      // Use crypto.randomUUID if available, fallback to random string
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+      }
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    // Build complete invoice snapshot for public link
+    function buildInvoiceSnapshot(invoice) {
+      return {
+        id: invoice.id,
+        Number: invoice.Number,
+        Issued: invoice.Issued,
+        Due: invoice.Due,
+        Invoice: invoice.Invoice,
+        Status: invoice.Status,
+        Client: {
+          id: invoice.Client.id,
+          Name: invoice.Client.Name,
+          First: invoice.Client.First,
+          Last: invoice.Client.Last,
+          Email: invoice.Client.Email,
+          Phone: invoice.Client.Phone,
+          Address: invoice.Client.Address,
+          Address2: invoice.Client.Address2,
+          City: invoice.Client.City,
+          State: invoice.Client.State,
+          Zip: invoice.Client.Zip
+        },
+        Invoicer: {
+          id: invoice.Invoicer.id,
+          Name: invoice.Invoicer.Name,
+          First: invoice.Invoicer.First,
+          Last: invoice.Invoicer.Last,
+          Email: invoice.Invoicer.Email,
+          Phone: invoice.Invoicer.Phone,
+          Address: invoice.Invoicer.Address,
+          Address2: invoice.Invoicer.Address2,
+          City: invoice.Invoicer.City,
+          State: invoice.Invoicer.State,
+          Zip: invoice.Invoicer.Zip,
+          LogoURL: invoice.Invoicer.LogoURL
+        },
+        Items: invoice.Items.map(item => ({
+          id: item.id,
+          Tree_Kind: item.Tree_Kind,
+          Height_ft_: item.Height_ft_,
+          DBH_in: item.DBH_in,
+          Task: item.Task,
+          Description: item.Description,
+          Price: item.Price
+        })),
+        Total: invoice.Total,
+        QuoteContent: invoice.QuoteContent,
+        InvoiceContent: invoice.InvoiceContent
+      };
+    }
+
+    // Generate quote link and create snapshot
+    async function generateQuoteLink() {
+      if (!data.invoice || data.generatingLink) return;
+
+      try {
+        data.generatingLink = true;
+        data.status = 'Generating quote link...';
+
+        const hash = generateUniqueHash();
+        const snapshot = buildInvoiceSnapshot(data.invoice);
+        const snapshotJson = JSON.stringify(snapshot);
+
+        // Create record in PublicInvoiceSnapshots
+        await grist.docApi.applyUserActions([
+          ['AddRecord', 'PublicInvoiceSnapshots', null, {
+            hash: hash,
+            invoice_id: data.invoice.id,
+            type: 'quote',
+            invoice_data: snapshotJson,
+            created_date: Math.floor(Date.now() / 1000),
+            is_active: true
+          }]
+        ]);
+
+        // Update invoice status to "Quote Sent" (status ID 2)
+        await grist.docApi.applyUserActions([
+          ['UpdateRecord', 'Invoices2', data.invoice.id, {
+            Status: 2
+          }]
+        ]);
+
+        // Generate the public link
+        const publicLink = `https://missioncritical842.github.io/Stroikos/public-invoice.html?type=quote&hash=${hash}`;
+        data.currentPublicLink = publicLink;
+        data.selectedStatus = 2;
+
+        // Refresh snapshot list
+        await refreshPublicSnapshots();
+
+        // Refresh tables to get updated status
+        await fetchAllTables();
+        const invoice = buildInvoiceFromRow(data.invoice.id);
+        data.invoice = invoice;
+
+        data.status = '';
+        data.generatingLink = false;
+      } catch (err) {
+        console.error('Failed to generate quote link:', err);
+        data.status = 'Failed to generate quote link: ' + err.message;
+        data.generatingLink = false;
+      }
+    }
+
+    // Generate invoice link and create snapshot
+    async function generateInvoiceLink() {
+      if (!data.invoice || data.generatingLink) return;
+
+      try {
+        data.generatingLink = true;
+        data.status = 'Generating invoice link...';
+
+        const hash = generateUniqueHash();
+        const snapshot = buildInvoiceSnapshot(data.invoice);
+        const snapshotJson = JSON.stringify(snapshot);
+
+        // Create record in PublicInvoiceSnapshots
+        await grist.docApi.applyUserActions([
+          ['AddRecord', 'PublicInvoiceSnapshots', null, {
+            hash: hash,
+            invoice_id: data.invoice.id,
+            type: 'invoice',
+            invoice_data: snapshotJson,
+            created_date: Math.floor(Date.now() / 1000),
+            is_active: true
+          }]
+        ]);
+
+        // Update invoice status to "Invoice Sent" (status ID 6)
+        await grist.docApi.applyUserActions([
+          ['UpdateRecord', 'Invoices2', data.invoice.id, {
+            Status: 6
+          }]
+        ]);
+
+        // Generate the public link
+        const publicLink = `https://missioncritical842.github.io/Stroikos/public-invoice.html?type=invoice&hash=${hash}`;
+        data.currentPublicLink = publicLink;
+        data.selectedStatus = 6;
+
+        // Refresh snapshot list
+        await refreshPublicSnapshots();
+
+        // Refresh tables to get updated status
+        await fetchAllTables();
+        const invoice = buildInvoiceFromRow(data.invoice.id);
+        data.invoice = invoice;
+
+        data.status = '';
+        data.generatingLink = false;
+      } catch (err) {
+        console.error('Failed to generate invoice link:', err);
+        data.status = 'Failed to generate invoice link: ' + err.message;
+        data.generatingLink = false;
+      }
+    }
+
+    // Refresh public snapshots for current invoice
+    async function refreshPublicSnapshots() {
+      if (!data.invoice) {
+        data.publicSnapshots = [];
+        data.currentPublicLink = null;
+        data.quoteSignatureInfo = null;
+        return;
+      }
+
+      try {
+        // Re-fetch PublicInvoiceSnapshots table
+        const snapshotsTable = await grist.docApi.fetchTable('PublicInvoiceSnapshots');
+        tableCache.PublicInvoiceSnapshots = tableToRows(snapshotsTable);
+
+        // Filter snapshots for current invoice
+        const snapshots = tableCache.PublicInvoiceSnapshots.filter(s => s.invoice_id === data.invoice.id);
+        data.publicSnapshots = snapshots;
+
+        // Find most recent quote snapshot
+        const quoteSnapshot = snapshots
+          .filter(s => s.type === 'quote' && s.is_active)
+          .sort((a, b) => b.created_date - a.created_date)[0];
+
+        if (quoteSnapshot) {
+          const quoteLink = `https://missioncritical842.github.io/Stroikos/public-invoice.html?type=quote&hash=${quoteSnapshot.hash}`;
+
+          // If status is 2 (Quote Sent) or 3 (Quote Accepted), show quote link
+          if (data.invoice.Status === 2 || data.invoice.Status === 3) {
+            data.currentPublicLink = quoteLink;
+          }
+
+          // Check for signature
+          if (quoteSnapshot.signature_data) {
+            try {
+              data.quoteSignatureInfo = JSON.parse(quoteSnapshot.signature_data);
+            } catch (e) {
+              console.error('Failed to parse signature data:', e);
+            }
+          }
+        }
+
+        // Find most recent invoice snapshot
+        const invoiceSnapshot = snapshots
+          .filter(s => s.type === 'invoice' && s.is_active)
+          .sort((a, b) => b.created_date - a.created_date)[0];
+
+        if (invoiceSnapshot && data.invoice.Status === 6) {
+          const invoiceLink = `https://missioncritical842.github.io/Stroikos/public-invoice.html?type=invoice&hash=${invoiceSnapshot.hash}`;
+          data.currentPublicLink = invoiceLink;
+        }
+      } catch (err) {
+        console.error('Failed to refresh public snapshots:', err);
+      }
+    }
+
+    // Copy link to clipboard
+    function copyLink(link) {
+      if (!link) return;
+
+      // Try modern clipboard API first
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(() => {
+          data.linkCopied = true;
+          setTimeout(() => { data.linkCopied = false; }, 2000);
+        }).catch(err => {
+          console.error('Clipboard write failed:', err);
+          fallbackCopyLink(link);
+        });
+      } else {
+        fallbackCopyLink(link);
+      }
+    }
+
+    // Fallback copy method for older browsers
+    function fallbackCopyLink(link) {
+      const textarea = document.createElement('textarea');
+      textarea.value = link;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        data.linkCopied = true;
+        setTimeout(() => { data.linkCopied = false; }, 2000);
+      } catch (err) {
+        console.error('Fallback copy failed:', err);
+      }
+      document.body.removeChild(textarea);
+    }
+
+    // ===== END WORKFLOW FUNCTIONS =====
 
     // Populate client selector with all clients
     function populateClientSelector() {
@@ -2092,6 +2496,9 @@
         } else {
           data.selectedStatus = null;
         }
+
+        // Load public snapshots for workflow panel
+        refreshPublicSnapshots();
       } catch (err) {
         handleError(err);
       }
@@ -2356,6 +2763,25 @@
           getClientName: function(clientId) {
             const client = this.clients.find(c => c.id === clientId);
             return client ? client.name : '';
+          },
+          // Workflow methods
+          getStatusName: function(statusId) {
+            return getStatusName(statusId);
+          },
+          getStatusClass: function(statusId) {
+            return getStatusClass(statusId);
+          },
+          formatTimestamp: function(timestamp) {
+            return formatTimestamp(timestamp);
+          },
+          generateQuoteLink: function() {
+            generateQuoteLink();
+          },
+          generateInvoiceLink: function() {
+            generateInvoiceLink();
+          },
+          copyLink: function(link) {
+            copyLink(link);
           }
         },
         watch: {
@@ -2484,6 +2910,60 @@
                 {{ saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : 'Error' }}
               </span>
             </div>
+          </div>
+        </div>
+
+        <!-- Workflow Panel -->
+        <div class="workflow-panel" v-if="selectedInvoiceId && invoice">
+          <div :class="['workflow-status-badge', getStatusClass(invoice.Status)]">
+            {{ getStatusName(invoice.Status) }}
+          </div>
+
+          <div class="workflow-actions">
+            <!-- Status 1: Quote Created - Show Generate Quote Link -->
+            <template v-if="invoice.Status === 1">
+              <button class="workflow-btn"
+                      @click="generateQuoteLink"
+                      :disabled="generatingLink">
+                {{ generatingLink ? 'Generating...' : 'Generate Quote Link' }}
+              </button>
+            </template>
+
+            <!-- Status 2: Quote Sent - Show Quote Link -->
+            <template v-if="invoice.Status === 2 && currentPublicLink">
+              <div class="workflow-link-display">
+                <span class="workflow-link-text">{{ currentPublicLink }}</span>
+                <button :class="['workflow-copy-btn', { copied: linkCopied }]"
+                        @click="copyLink(currentPublicLink)">
+                  {{ linkCopied ? 'Copied!' : 'Copy' }}
+                </button>
+              </div>
+            </template>
+
+            <!-- Status 3: Quote Accepted - Show Signature Info + Generate Invoice Link -->
+            <template v-if="invoice.Status === 3">
+              <div class="workflow-signature-info" v-if="quoteSignatureInfo">
+                <strong>Accepted by:</strong>
+                {{ quoteSignatureInfo.name }}<br>
+                <strong>On:</strong> {{ formatTimestamp(quoteSignatureInfo.timestamp) }}
+              </div>
+              <button class="workflow-btn"
+                      @click="generateInvoiceLink"
+                      :disabled="generatingLink">
+                {{ generatingLink ? 'Generating...' : 'Generate Invoice Link' }}
+              </button>
+            </template>
+
+            <!-- Status 6: Invoice Sent - Show Invoice Link -->
+            <template v-if="invoice.Status === 6 && currentPublicLink">
+              <div class="workflow-link-display">
+                <span class="workflow-link-text">{{ currentPublicLink }}</span>
+                <button :class="['workflow-copy-btn', { copied: linkCopied }]"
+                        @click="copyLink(currentPublicLink)">
+                  {{ linkCopied ? 'Copied!' : 'Copy' }}
+                </button>
+              </div>
+            </template>
           </div>
         </div>
 
