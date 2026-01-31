@@ -364,9 +364,8 @@
 
   <script>
     // Grist API configuration
-    const GRIST_DOC_ID = '8ApvMNhvYqr8R8A2NA1fdD';
-    const GRIST_API_KEY = 'f26ac57c1e1095b4b67a3d4e03e5f06f7c04c21d'; // Read-only public key
-    const GRIST_SERVER = 'https://grist.stroikos.com';
+    const GRIST_DOC_ID = '8ApvMNhvYqr8';
+    const GRIST_SERVER = 'https://stroikos.getgrist.com';
 
     new Vue({
       el: '#app',
@@ -405,12 +404,7 @@
 
             // Fetch the snapshot from Grist
             const response = await fetch(
-              `${GRIST_SERVER}/api/docs/${GRIST_DOC_ID}/tables/PublicInvoiceSnapshots/records`,
-              {
-                headers: {
-                  'Authorization': `Bearer ${GRIST_API_KEY}`
-                }
-              }
+              `${GRIST_SERVER}/api/docs/${GRIST_DOC_ID}/tables/PublicInvoiceSnapshots/records`
             );
 
             if (!response.ok) {
@@ -478,7 +472,6 @@
               {
                 method: 'PATCH',
                 headers: {
-                  'Authorization': `Bearer ${GRIST_API_KEY}`,
                   'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
@@ -505,7 +498,6 @@
               {
                 method: 'PATCH',
                 headers: {
-                  'Authorization': `Bearer ${GRIST_API_KEY}`,
                   'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
