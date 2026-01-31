@@ -1875,7 +1875,12 @@
 
         // Rebuild the invoice to include the updated item
         const invoice = buildInvoiceFromRow(data.invoice.id);
-        data.invoice = invoice;
+        // Force Vue to detect the change by replacing the entire object
+        Object.assign(data.invoice, invoice);
+        // Force update to ensure UI reflects changes
+        if (app) {
+          app.$forceUpdate();
+        }
         window.invoice = invoice;
 
         data.saveStatus = 'saved';
