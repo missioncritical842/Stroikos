@@ -1708,16 +1708,16 @@
       // Populate form with existing data
       data.editingTreeId = treeId;
       data.newTreeForm = {
-        Tree_Kind: tree.Tree_Kind || null,
-        Height_ft_: tree.Height_ft_ || 0,
-        DBH_in: tree.DBH_in || 0,
-        Task: tree.Task || null,
-        Location_Difficulty: tree.Location_Difficulty || null,
-        Drop_Zone_Difficulty: tree.Drop_Zone_Difficulty || null,
-        Deferred_Maintenance_Difficulty: tree.Deferred_Maintenance_Difficulty || null,
-        Crew: tree.Crew || null,
-        Price: tree.Price || 0,
-        Description: tree.Description || ''
+        Tree_Kind: tree.Tree_Kind ?? null,
+        Height_ft_: tree.Height_ft_ ?? 0,
+        DBH_in: tree.DBH_in ?? 0,
+        Task: tree.Task ?? null,
+        Location_Difficulty: tree.Location_Difficulty ?? null,
+        Drop_Zone_Difficulty: tree.Drop_Zone_Difficulty ?? null,
+        Deferred_Maintenance_Difficulty: tree.Deferred_Maintenance_Difficulty ?? null,
+        Crew: tree.Crew ?? null,
+        Price: tree.Price ?? 0,
+        Description: tree.Description ?? ''
       };
 
       // Calculate values based on existing data
