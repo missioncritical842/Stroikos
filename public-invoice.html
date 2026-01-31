@@ -13,130 +13,157 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-      background: #f5f5f5;
+      font-family: Sans-Serif;
+      background: #e0e0e0;
+      margin: 0;
+      padding: 0;
     }
 
-    .container {
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      padding: 40px;
-    }
-
-    .header {
+    .letterhead {
       display: flex;
+      align-items: center;
+      margin-bottom: 2em;
       justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 40px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #2a7a2a;
     }
 
-    .logo {
-      max-width: 200px;
-      max-height: 100px;
+    .letterhead .logo {
+      margin-right: 1em;
+      font-size: 12pt;
+      margin-top: 0.5em;
     }
 
-    .company-info {
-      text-align: right;
+    .letterhead-text {
+      flex-grow: 1;
+      text-align: center;
     }
 
     .company-name {
-      font-size: 24px;
+      font-family: sans-serif;
       font-weight: bold;
-      color: #2a7a2a;
-      margin-bottom: 10px;
+      font-size: 18pt;
+      letter-spacing: 0.05em;
     }
 
     .company-details {
-      font-size: 14px;
-      color: #666;
-      line-height: 1.6;
+      font-family: sans-serif;
+      font-weight: 300;
+      font-size: 12pt;
+      margin-top: 0.5em;
     }
 
-    .invoice-title {
-      font-size: 32px;
+    .stump-man-header {
+      font-family: sans-serif;
       font-weight: bold;
-      color: #2a7a2a;
-      margin-bottom: 30px;
-    }
-
-    .info-section {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 30px;
-      margin-bottom: 30px;
-    }
-
-    .info-block h3 {
-      font-size: 14px;
-      font-weight: 600;
       text-transform: uppercase;
-      color: #2a7a2a;
-      margin-bottom: 10px;
+      font-size: 24pt;
     }
 
-    .info-block p {
-      margin: 5px 0;
-      font-size: 14px;
-      line-height: 1.6;
+    .stump-man-container {
+      position: relative;
+      text-align: center;
+      margin-bottom: 2em;
+      height: 90px;
     }
 
-    .items-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 30px 0;
+    .stump-man-logo {
+      max-height: 90px;
+      position: absolute;
+      right: 0;
+      top: 0;
     }
 
-    .items-table th {
-      background: #2a7a2a;
-      color: white;
-      padding: 12px;
-      text-align: left;
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    .items-table td {
-      padding: 12px;
-      border-bottom: 1px solid #e0e0e0;
-      font-size: 14px;
-    }
-
-    .items-table tr:last-child td {
-      border-bottom: none;
-    }
-
-    .total-row {
-      background: #f9f9f9;
-    }
-
-    .total-row td {
+    .address-title {
       font-weight: bold;
-      font-size: 16px;
-      padding-top: 20px;
-      border-top: 2px solid #2a7a2a;
+      font-size: 1.1em;
+      margin-bottom: 0;
+      text-transform: uppercase;
     }
 
-    .text-right {
+    .supplier {
+      color: #333;
+      display: block;
+    }
+
+    div.top {
+      display: flex;
+      width: 100%;
+      padding: 0px;
+      justify-content: space-between;
+    }
+
+    .name {
+      color: #333;
+    }
+
+    .address {
+      padding-bottom: 1em;
+    }
+
+    table.items {
+      width: 100%;
+      border: 1px solid #ccc;
+      border-collapse: collapse;
+    }
+
+    table.items th {
+      text-align: left;
+      color: black;
+      text-transform: uppercase;
+      font-weight: normal;
+      padding: 4px;
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+
+    table.items td {
+      background-color: white;
+      padding: 4px;
+      border: 1px solid #eee;
+    }
+
+    .money {
       text-align: right;
+      width: 15%;
+      color: #333;
     }
 
-    .content-section {
-      margin: 30px 0;
-      padding: 20px;
-      background: #f9f9f9;
-      border-radius: 4px;
-      line-height: 1.8;
+    table.items .total-row td {
+      font-weight: bold;
+      border-top: 2px solid #333;
     }
 
+    .total-label {
+      text-align: right;
+      padding-right: 1em;
+    }
+
+    .currency-symbol {
+      display: inline-block;
+      min-width: 1em;
+    }
+
+    div.newlined, p.note {
+      white-space: pre-line;
+    }
+
+    .email, .phone, .website {
+      margin-top: 0.25em;
+    }
+
+    /* Letter size page simulation */
+    .invoice-content {
+      background: white;
+      width: 7.5in;
+      min-height: 10in;
+      margin: 1em auto;
+      padding: 0.5in;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+
+    /* Signature Section */
     .signature-section {
-      margin-top: 40px;
-      padding: 30px;
+      margin-top: 3em;
+      padding: 1.5em;
       background: #f0f9f0;
       border: 2px solid #2a7a2a;
       border-radius: 8px;
@@ -144,13 +171,14 @@
 
     .signature-section h3 {
       color: #2a7a2a;
-      margin-bottom: 20px;
+      margin-top: 0;
+      margin-bottom: 1em;
     }
 
     .signature-form {
       display: flex;
       flex-direction: column;
-      gap: 15px;
+      gap: 1em;
     }
 
     .form-group {
@@ -160,12 +188,12 @@
 
     .form-group label {
       font-weight: 600;
-      margin-bottom: 5px;
+      margin-bottom: 0.5em;
       font-size: 14px;
     }
 
     .form-group input {
-      padding: 10px;
+      padding: 0.5em;
       border: 1px solid #ccc;
       border-radius: 4px;
       font-size: 14px;
@@ -175,7 +203,7 @@
       background: #2a7a2a;
       color: white;
       border: none;
-      padding: 12px 24px;
+      padding: 0.75em 1.5em;
       font-size: 16px;
       font-weight: 600;
       border-radius: 4px;
@@ -192,39 +220,63 @@
       cursor: not-allowed;
     }
 
+    .success-message {
+      background: #e8f5e9;
+      color: #2a7a2a;
+      padding: 1.5em;
+      border-radius: 4px;
+      margin-top: 2em;
+      font-weight: 600;
+      text-align: center;
+    }
+
     .error-message {
       background: #fee;
       color: #c33;
-      padding: 20px;
+      padding: 1.5em;
       border-radius: 4px;
-      margin: 20px 0;
+      margin: 2em auto;
+      max-width: 600px;
+      text-align: center;
     }
 
     .loading-message {
       text-align: center;
-      padding: 40px;
+      padding: 3em;
       font-size: 18px;
       color: #666;
     }
 
-    .success-message {
-      background: #e8f5e9;
-      color: #2a7a2a;
-      padding: 20px;
-      border-radius: 4px;
-      margin: 20px 0;
-      font-weight: 600;
+    @media print {
+      @page {
+        size: letter;
+        margin: 0.5in;
+      }
+
+      body {
+        background: white !important;
+      }
+
+      .invoice-content {
+        background: white !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        min-height: auto !important;
+      }
+
+      .signature-section {
+        display: none !important;
+      }
     }
 
-    @media print {
-      body {
-        background: white;
-      }
-      .container {
+    @media screen and (max-width: 8.5in) {
+      .invoice-content {
+        width: 100%;
+        margin: 0;
         box-shadow: none;
-      }
-      .signature-section {
-        display: none;
+        min-height: auto;
       }
     }
   </style>
@@ -242,81 +294,134 @@
     </div>
 
     <!-- Invoice Display -->
-    <div v-if="invoice && !error" class="container">
-      <!-- Header -->
-      <div class="header">
-        <div>
-          <!-- Logo placeholder - add logo URL to Invoicer table if needed -->
-        </div>
-        <div class="company-info">
-          <div class="company-name">{{ invoice.Invoicer.Name }}</div>
-          <div class="company-details">
-            <div>{{ invoice.Invoicer.First }} {{ invoice.Invoicer.Last }}</div>
-            <div>{{ invoice.Invoicer.Street1 }}</div>
-            <div v-if="invoice.Invoicer.Street2">{{ invoice.Invoicer.Street2 }}</div>
-            <div>{{ invoice.Invoicer.City }}, {{ invoice.Invoicer.State }} {{ invoice.Invoicer.Zip }}</div>
-            <div>{{ invoice.Invoicer.Email }}</div>
-            <div>{{ invoice.Invoicer.Phone }}</div>
+    <div v-if="invoice && !error" class="invoice-content">
+      <!-- Letterhead for Stroikos Services -->
+      <template v-if="invoice.Invoicer && invoice.Invoicer.Name === 'Stroikos Services'">
+        <div class="letterhead">
+          <img class="logo" src="https://stroikos.com/wp-content/uploads/2024/10/Stroikos-services-logo.png" alt="Stroikos Logo">
+          <div class="letterhead-text">
+            <div class="company-name">Stroikos Services — Tree Care</div>
+            <div class="company-details">Arbores amamus</div>
           </div>
         </div>
+      </template>
+
+      <!-- Letterhead for A Stump Man -->
+      <template v-else-if="invoice.Invoicer && invoice.Invoicer.Name === 'A Stump Man'">
+        <div class="stump-man-container">
+          <div class="stump-man-header">A STUMP MAN</div>
+          <img class="stump-man-logo" src="https://stroikos.com/wp-content/uploads/2025/06/A-Stump-Man-Logo.jpg" alt="A Stump Man Logo">
+        </div>
+      </template>
+
+      <!-- Client and Invoicer Info -->
+      <div class="top">
+        <div class="supplier">
+          <div class="address-title">Client</div>
+          <div>
+            <div class="address">
+              <span class="name">{{ invoice.Client.First }} {{ invoice.Client.Last }}</span><br />
+              {{ invoice.Client.Street1 }}<br />
+              <template v-if="invoice.Client.Street2">
+                {{ invoice.Client.Street2 }}<br />
+              </template>
+              {{ invoice.Client.City }} {{ invoice.Client.State }} {{ invoice.Client.Zip }}<br />
+            </div>
+            <div class="invoice-meta">
+              <div v-if="invoice.Invoice ? invoice.Issued : invoice.Quote_Date">
+                <strong>Date:</strong> {{ formatDate(invoice.Invoice ? invoice.Issued : invoice.Quote_Date) }}
+              </div>
+              <div v-if="invoice.Number">
+                <strong>{{ invoice.Invoice ? 'Invoice' : 'Quote' }} #:</strong> {{ invoice.Number }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- From section for Stroikos Services only -->
+        <template v-if="invoice.Invoicer && invoice.Invoicer.Name === 'Stroikos Services'">
+          <div class="supplier">
+            <div class="address-title">From</div>
+            <div>
+              <div class="address">
+                <span class="name">{{ invoice.Invoicer.Name }}</span><br />
+                {{ invoice.Invoicer.Street1 }}<br />
+                <template v-if="invoice.Invoicer.Street2">
+                  {{ invoice.Invoicer.Street2 }}<br />
+                </template>
+                {{ invoice.Invoicer.City }} {{ invoice.Invoicer.State }} {{ invoice.Invoicer.Zip }}<br />
+              </div>
+              <div class="invoice-meta">
+                <div v-if="invoice.Invoice && invoice.Due">
+                  <strong>Due Date:</strong> {{ formatDate(invoice.Due) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
       </div>
 
-      <!-- Title -->
-      <h1 class="invoice-title">
-        {{ documentType === 'quote' ? 'Quote' : 'Invoice' }} #{{ invoice.Number }}
-      </h1>
-
-      <!-- Info Section -->
-      <div class="info-section">
-        <div class="info-block">
-          <h3>Bill To</h3>
-          <p><strong>{{ invoice.Client.First }} {{ invoice.Client.Last }}</strong></p>
-          <p>{{ invoice.Client.Street1 }}</p>
-          <p v-if="invoice.Client.Street2">{{ invoice.Client.Street2 }}</p>
-          <p>{{ invoice.Client.City }}, {{ invoice.Client.State }} {{ invoice.Client.Zip }}</p>
-          <p>{{ invoice.Client.Email }}</p>
-          <p>{{ invoice.Client.Phone }}</p>
-        </div>
-        <div class="info-block">
-          <h3>{{ documentType === 'quote' ? 'Quote' : 'Invoice' }} Details</h3>
-          <p><strong>{{ documentType === 'quote' ? 'Quote' : 'Invoice' }} Number:</strong> {{ invoice.Number }}</p>
-          <p><strong>Date Issued:</strong> {{ formatDate(invoice.Issued) }}</p>
-          <p v-if="documentType === 'invoice' && invoice.Due">
-            <strong>Due Date:</strong> {{ formatDate(invoice.Due) }}
-          </p>
-        </div>
+      <!-- Greeting and Note -->
+      <div style="margin: 2em 0;">
+        <p v-if="invoice.Client">
+          Dear {{ invoice.Client.First }},
+        </p>
+        <p v-if="invoice.Invoice ? invoice.InvoiceNote : invoice.QuoteNote" class="note" style="margin-top: 1em;">
+          {{ invoice.Invoice ? invoice.InvoiceNote : invoice.QuoteNote }}
+        </p>
       </div>
 
       <!-- Items Table -->
-      <table class="items-table">
-        <thead>
-          <tr>
-            <th>Description</th>
-            <th class="text-right">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in invoice.Items" :key="item.id">
-            <td>
-              <div><strong>{{ item.Task }}</strong></div>
-              <div style="color: #666; font-size: 13px;">
-                {{ item.Tree_Kind }} - {{ item.Height_ft_ }}ft, {{ item.DBH_in }}" DBH
-              </div>
-              <div v-if="item.Description" style="margin-top: 5px; font-size: 13px;">
-                {{ item.Description }}
-              </div>
-            </td>
-            <td class="text-right">{{ formatCurrency(item.Price) }}</td>
-          </tr>
-          <tr class="total-row">
-            <td class="text-right"><strong>Total:</strong></td>
-            <td class="text-right">{{ formatCurrency(invoice.Total) }}</td>
-          </tr>
-        </tbody>
+      <table class="items">
+        <tr>
+          <th>Description</th>
+          <th class="money">Price</th>
+        </tr>
+        <tr v-for="(item, index) in invoice.Items" :key="item.id">
+          <td>{{ item.Description }}</td>
+          <td class="money">
+            <span>
+              <span :class="{ 'currency-symbol': index === 0 }">{{ index === 0 ? '$' : '' }}</span>
+              <span>{{ Math.round(Number(item.Price)).toLocaleString('en-US') }}</span>
+            </span>
+          </td>
+        </tr>
+        <tr class="total-row">
+          <td class="total-label">Total</td>
+          <td class="money">
+            <span>
+              <span class="currency-symbol">$</span>
+              <span>{{ Math.round(Number(invoice.Total)).toLocaleString('en-US') }}</span>
+            </span>
+          </td>
+        </tr>
       </table>
 
-      <!-- Content Section -->
-      <div v-if="content" class="content-section" v-html="content"></div>
+      <!-- Final Text -->
+      <div style="margin-top: 2em;">
+        <p v-if="invoice.Invoice ? invoice.FinalInvoiceText : invoice.FinalQuoteText" class="note">
+          <span>{{ invoice.Invoice ? invoice.FinalInvoiceText : invoice.FinalQuoteText }}</span>
+          <span v-if="invoice.Invoicer"> {{ invoice.Invoicer.Name }}.</span>
+        </p>
+        <p v-else-if="invoice.Invoicer">Thank you for considering {{ invoice.Invoicer.Name }}.</p>
+        <br/>
+        <p style="margin-top: 1em;">Gratefully,</p>
+        <br/><br/>
+        <p v-if="invoice.Invoicer" style="margin-top: 1em; margin-bottom: 0;">
+          {{ invoice.Invoicer.First }} {{ invoice.Invoicer.Last }}
+        </p>
+        <div v-if="invoice.Invoicer">
+          <template v-if="invoice.Invoicer.Email">
+            <div class="email">{{ invoice.Invoicer.Email }}</div>
+          </template>
+          <template v-if="invoice.Invoicer.Phone">
+            <div class="phone">{{ invoice.Invoicer.Phone }}</div>
+          </template>
+          <template v-if="invoice.Invoicer.Website">
+            <div class="website"><a :href="tweakUrl(invoice.Invoicer.Website)">{{ invoice.Invoicer.Website }}</a></div>
+          </template>
+        </div>
+      </div>
 
       <!-- Signature Section (Quotes Only) -->
       <div v-if="documentType === 'quote' && !signatureSubmitted && !alreadySigned" class="signature-section">
@@ -350,14 +455,14 @@
         </form>
       </div>
 
-      <!-- Already Signed Message -->
-      <div v-if="alreadySigned" class="success-message">
-        This quote has already been accepted.
-      </div>
-
       <!-- Signature Submitted Message -->
-      <div v-if="signatureSubmitted" class="success-message">
-        Thank you! Your acceptance has been recorded. We will contact you shortly to schedule the work.
+      <div v-if="signatureSubmitted || alreadySigned" class="success-message">
+        <template v-if="signatureSubmitted">
+          Thank you! Your acceptance has been recorded. We will contact you shortly to schedule the work.
+        </template>
+        <template v-else>
+          This quote has already been accepted.
+        </template>
       </div>
     </div>
   </div>
@@ -380,13 +485,18 @@
         signatureEmail: '',
         submitting: false,
         signatureSubmitted: false,
-        alreadySigned: false,
-        content: ''
+        alreadySigned: false
       },
       mounted() {
         this.loadInvoice();
       },
       methods: {
+        tweakUrl(url) {
+          if (!url) return url;
+          if (url.toLowerCase().startsWith('http')) return url;
+          return 'https://' + url;
+        },
+
         async loadInvoice() {
           try {
             // Parse URL parameters
@@ -434,13 +544,6 @@
 
             // Parse the invoice data
             this.invoice = JSON.parse(snapshot.fields.invoice_data);
-
-            // Set content based on type
-            if (this.documentType === 'quote') {
-              this.content = this.invoice.FinalQuoteText || '';
-            } else {
-              this.content = this.invoice.FinalInvoiceText || '';
-            }
 
             this.loading = false;
           } catch (err) {
@@ -534,14 +637,6 @@
             month: 'long',
             day: 'numeric'
           });
-        },
-
-        formatCurrency(value) {
-          if (typeof value !== 'number') return '—';
-          return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD'
-          }).format(value);
         }
       }
     });
