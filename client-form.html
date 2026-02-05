@@ -330,32 +330,18 @@
     function validateForm(form) {
       const errors = {};
 
-      if (!form.First.trim()) {
-        errors.First = 'First name is required';
+      // Require at least first name OR last name
+      if (!form.First.trim() && !form.Last.trim()) {
+        errors.First = 'First name or Last name is required';
+        errors.Last = 'First name or Last name is required';
       }
 
-      if (!form.Last.trim()) {
-        errors.Last = 'Last name is required';
-      }
-
-      if (!form.Street1.trim()) {
-        errors.Street1 = 'Street address is required';
-      }
-
-      if (!form.City.trim()) {
-        errors.City = 'City is required';
-      }
-
-      if (!form.State) {
-        errors.State = 'State is required';
-      }
-
-      if (!form.Zip.trim()) {
-        errors.Zip = 'ZIP code is required';
-      } else if (!/^\d{5}(-\d{4})?$/.test(form.Zip.trim())) {
+      // Validate ZIP code format if provided
+      if (form.Zip.trim() && !/^\d{5}(-\d{4})?$/.test(form.Zip.trim())) {
         errors.Zip = 'Invalid ZIP code format';
       }
 
+      // Validate email format if provided
       if (form.Email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.Email.trim())) {
         errors.Email = 'Invalid email format';
       }
@@ -479,7 +465,7 @@
       <template v-else>
         <div class="form-header">
           <h1>Add New Client</h1>
-          <p>Fill out the form below to add a new client to the database.</p>
+          <p>Fill out the form below to add a new client to the database. At least first name or last name is required.</p>
         </div>
 
         <div v-if="message" :class="['status-message', messageType]" @click="clearMessage">
@@ -517,7 +503,7 @@
             <h2>Address</h2>
             <div class="form-row">
               <div class="form-group">
-                <label for="street1">Street Address <span class="required">*</span></label>
+                <label for="street1">Street Address</label>
                 <input
                   type="text"
                   id="street1"
@@ -540,7 +526,7 @@
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label for="city">City <span class="required">*</span></label>
+                <label for="city">City</label>
                 <input
                   type="text"
                   id="city"
@@ -550,7 +536,7 @@
                 >
               </div>
               <div class="form-group third">
-                <label for="state">State <span class="required">*</span></label>
+                <label for="state">State</label>
                 <select
                   id="state"
                   v-model="form.State"
@@ -560,7 +546,7 @@
                 </select>
               </div>
               <div class="form-group third">
-                <label for="zip">ZIP Code <span class="required">*</span></label>
+                <label for="zip">ZIP Code</label>
                 <input
                   type="text"
                   id="zip"
