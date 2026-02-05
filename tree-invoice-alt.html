@@ -1976,17 +1976,67 @@
       const docNumber = data.invoice.Number || 'N/A';
       const invoicerName = invoicer.Name || 'Stroikos Services';
       const clientName = client.First || 'Valued Customer';
+      const clientFullName = [client.First, client.Last].filter(Boolean).join(' ') || 'Valued Customer';
 
-      // Build invoice details for email body
-      let itemsList = '';
+      // Format dates
+      const date = data.invoice.Invoice ? data.invoice.Issued : data.invoice.Quote_Date;
+      const dateStr = date ? moment.utc(date * 1000).format('MMMM DD, YYYY') : '';
+      const dueDate = data.invoice.Due ? moment.utc(data.invoice.Due * 1000).format('MMMM DD, YYYY') : '';
+
+      // Build comprehensive invoice details
+      let header = `================================\n${docType.toUpperCase()} #${docNumber}\n================================\n\n`;
+
+      // Client info
+      header += `CLIENT:\n${clientFullName}\n`;
+      if (client.Street1) header += `${client.Street1}\n`;
+      if (client.Street2) header += `${client.Street2}\n`;
+      if (client.City || client.State || client.Zip) {
+        header += `${client.City || ''}, ${client.State || ''} ${client.Zip || ''}\n`.trim() + '\n';
+      }
+      header += '\n';
+
+      // Invoicer info
+      header += `FROM:\n${invoicerName}\n`;
+      if (invoicer.Street1) header += `${invoicer.Street1}\n`;
+      if (invoicer.Street2) header += `${invoicer.Street2}\n`;
+      if (invoicer.City || invoicer.State || invoicer.Zip) {
+        header += `${invoicer.City || ''}, ${invoicer.State || ''} ${invoicer.Zip || ''}\n`.trim() + '\n';
+      }
+      if (invoicer.Phone) header += `Phone: ${invoicer.Phone}\n`;
+      if (invoicer.Email) header += `Email: ${invoicer.Email}\n`;
+      header += '\n';
+
+      // Dates
+      if (dateStr) header += `Date: ${dateStr}\n`;
+      if (dueDate && !isQuote) header += `Due Date: ${dueDate}\n`;
+      header += '\n';
+
+      // Note before items
+      const topNote = isQuote ? data.invoice.QuoteNote : data.invoice.InvoiceNote;
+      let noteSection = '';
+      if (topNote) {
+        noteSection = `${topNote}\n\n`;
+      }
+
+      // Build detailed items list
+      let itemsSection = 'LINE ITEMS:\n================================\n';
       if (data.invoice.Items && Array.isArray(data.invoice.Items)) {
-        itemsList = data.invoice.Items.map(item => {
+        data.invoice.Items.forEach((item, index) => {
           const desc = item.Description || '';
           const price = item.Price ? '$' + Math.round(Number(item.Price)).toLocaleString('en-US') : '';
-          return `  • ${desc} - ${price}`;
-        }).join('\n');
+          itemsSection += `${index + 1}. ${desc}\n   Price: ${price}\n\n`;
+        });
       }
+
       const total = data.invoice.Total ? '$' + Math.round(Number(data.invoice.Total)).toLocaleString('en-US') : '$0';
+      itemsSection += `================================\nTOTAL: ${total}\n================================\n\n`;
+
+      // Final note
+      const finalNote = isQuote ? data.invoice.FinalQuoteText : data.invoice.FinalInvoiceText;
+      let finalSection = '';
+      if (finalNote) {
+        finalSection = `${finalNote} ${invoicerName}.\n\n`;
+      }
 
       // Pre-fill form
       data.emailForm = {
@@ -1994,14 +2044,7 @@
         subject: `${docType} #${docNumber} from ${invoicerName}`,
         body: `Dear ${clientName},
 
-Please find your ${docType.toLowerCase()} details below:
-
-${docType} #${docNumber}
-${itemsList}
-
-Total: ${total}
-
-To view, print, and ${isQuote ? 'approve your quote' : 'review your invoice'}, please click the link below:
+${noteSection}${header}${itemsSection}${finalSection}To view, print, and ${isQuote ? 'approve your quote' : 'review your invoice'}, please click the link below:
 
 ${data.currentPublicLink}
 
@@ -2075,6 +2118,7 @@ ${invoicer.Email || ''}`
         const formData = new FormData();
         formData.append('from', `${invoicer.Name || 'Stroikos Services'} <${invoicer.Email}>`);
         formData.append('to', data.emailForm.to);
+        formData.append('cc', invoicer.Email);
         formData.append('subject', data.emailForm.subject);
         formData.append('text', data.emailForm.body);
 
