@@ -2303,6 +2303,56 @@
       }
     }
 
+    // Delete a tree item
+    async function deleteTreeItem(treeId) {
+      if (!data.invoice || !data.invoice.id) {
+        console.warn('No invoice selected');
+        return;
+      }
+
+      // Confirm deletion
+      if (!confirm('Are you sure you want to delete this line item?')) {
+        return;
+      }
+
+      try {
+        data.status = 'Deleting item...';
+        data.suppressRefresh = true;
+
+        // Remove the tree record from Grist
+        await grist.docApi.applyUserActions([
+          ['RemoveRecord', 'Trees', treeId]
+        ]);
+
+        // Refresh the trees and invoices cache
+        const [treesTable, invoicesTable] = await Promise.all([
+          grist.docApi.fetchTable('Trees'),
+          grist.docApi.fetchTable('Invoices2')
+        ]);
+        tableCache.Trees = tableToRows(treesTable);
+        tableCache.Invoices2 = tableToRows(invoicesTable);
+
+        // Rebuild the invoice to reflect the deletion
+        const invoice = buildInvoiceFromRow(data.invoice.id);
+        Object.assign(data.invoice, invoice);
+        if (app) {
+          app.$forceUpdate();
+        }
+        window.invoice = invoice;
+
+        data.status = 'Item deleted';
+        setTimeout(() => {
+          data.status = '';
+          data.suppressRefresh = false;
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to delete tree item:', err);
+        alert('Failed to delete item: ' + err.message);
+        data.status = 'error';
+        data.suppressRefresh = false;
+      }
+    }
+
     // Create a new invoice for the selected client
     async function createNewInvoice() {
       if (!data.selectedClientId) {
@@ -2627,6 +2677,9 @@
           },
           openEditTreeModal: function(treeId) {
             openEditTreeModal(treeId);
+          },
+          deleteTreeItem: function(treeId) {
+            deleteTreeItem(treeId);
           },
           closeTreeModal: function() {
             closeTreeModal();
@@ -3083,7 +3136,8 @@
                 <input type="number" class="edit-input number" :value="item.Price" @input="updateTreeNumber(item.id, 'Price', $event)">
               </td>
               <td style="text-align: center;">
-                <button @click="openEditTreeModal(item.id)" style="background: #2a7a2a; color: white; border: none; padding: 0.25em 0.5em; border-radius: 3px; cursor: pointer; font-size: 0.85em;">Edit</button>
+                <button @click="openEditTreeModal(item.id)" style="background: #2a7a2a; color: white; border: none; padding: 0.25em 0.5em; border-radius: 3px; cursor: pointer; font-size: 0.85em; margin-right: 0.25em;">Edit</button>
+                <button @click="deleteTreeItem(item.id)" style="background: #c83200; color: white; border: none; padding: 0.25em 0.5em; border-radius: 3px; cursor: pointer; font-size: 0.85em;">Delete</button>
               </td>
             </tr>
             <tr class="total-row">
