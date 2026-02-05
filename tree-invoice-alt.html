@@ -2028,9 +2028,15 @@ ${invoicer.Email || ''}`
       try {
         const configTable = await grist.docApi.fetchTable('ApiConfig');
         const config = {};
-        configTable[2].forEach((key, index) => {
-          config[key] = configTable[3][index];
+
+        // Grist returns: { id: [...], Key: [...], Value: [...] }
+        const keys = configTable.Key || [];
+        const values = configTable.Value || [];
+
+        keys.forEach((key, index) => {
+          config[key] = values[index];
         });
+
         return config;
       } catch (err) {
         console.error('Failed to fetch API config:', err);
