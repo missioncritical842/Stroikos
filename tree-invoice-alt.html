@@ -641,6 +641,22 @@
         border-color: #10b981;
       }
 
+      .workflow-email-btn {
+        background: #3b82f6;
+        color: white;
+        border: 1px solid #2563eb;
+        padding: 0.4em 0.8em;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9em;
+        white-space: nowrap;
+        margin-left: 0.5em;
+      }
+
+      .workflow-email-btn:hover {
+        background: #2563eb;
+      }
+
       .workflow-signature-info {
         background: rgba(255, 255, 255, 0.1);
         padding: 0.75em;
@@ -1522,7 +1538,16 @@
       currentPublicLink: null,
       linkCopied: false,
       quoteSignatureInfo: null,
-      publicSnapshots: []
+      publicSnapshots: [],
+      // Email modal state
+      showEmailModal: false,
+      emailForm: {
+        to: '',
+        subject: '',
+        body: ''
+      },
+      sendingEmail: false,
+      emailStatus: ''
     };
     let app = undefined;
 
@@ -1923,6 +1948,156 @@
         console.error('Fallback copy failed:', err);
       }
       document.body.removeChild(textarea);
+    }
+
+    // Open email modal with pre-filled data
+    function openEmailModal() {
+      if (!data.invoice || !data.currentPublicLink) {
+        console.warn('No invoice or link available');
+        return;
+      }
+
+      // Check if client has email
+      const client = data.invoice.Client;
+      if (!client || !client.Email) {
+        alert('Client does not have an email address on file.');
+        return;
+      }
+
+      // Check if invoicer email is stroikos domain
+      const invoicer = data.invoice.Invoicer;
+      if (!invoicer || !invoicer.Email || !invoicer.Email.toLowerCase().includes('stroikos')) {
+        alert('Email can only be sent from a stroikos.com email address. Current invoicer email: ' + (invoicer && invoicer.Email ? invoicer.Email : 'not set'));
+        return;
+      }
+
+      const isQuote = data.invoice.Status === 2;
+      const docType = isQuote ? 'Quote' : 'Invoice';
+      const docNumber = data.invoice.Number || 'N/A';
+      const invoicerName = invoicer.Name || 'Stroikos Services';
+      const clientName = client.First || 'Valued Customer';
+
+      // Build invoice details for email body
+      let itemsList = '';
+      if (data.invoice.Items && Array.isArray(data.invoice.Items)) {
+        itemsList = data.invoice.Items.map(item => {
+          const desc = item.Description || '';
+          const price = item.Price ? '$' + Math.round(Number(item.Price)).toLocaleString('en-US') : '';
+          return `  • ${desc} - ${price}`;
+        }).join('\n');
+      }
+      const total = data.invoice.Total ? '$' + Math.round(Number(data.invoice.Total)).toLocaleString('en-US') : '$0';
+
+      // Pre-fill form
+      data.emailForm = {
+        to: client.Email,
+        subject: `${docType} #${docNumber} from ${invoicerName}`,
+        body: `Dear ${clientName},
+
+Please find your ${docType.toLowerCase()} details below:
+
+${docType} #${docNumber}
+${itemsList}
+
+Total: ${total}
+
+To view, print, and ${isQuote ? 'approve your quote' : 'review your invoice'}, please click the link below:
+
+${data.currentPublicLink}
+
+${isQuote ? 'Please review and approve the quote by signing on the page. Once approved, we will proceed with the work.' : 'Thank you for your business!'}
+
+Gratefully,
+${invoicer.First || ''} ${invoicer.Last || ''}
+${invoicerName}
+${invoicer.Phone || ''}
+${invoicer.Email || ''}`
+      };
+
+      data.showEmailModal = true;
+    }
+
+    // Close email modal
+    function closeEmailModal() {
+      data.showEmailModal = false;
+      data.emailStatus = '';
+    }
+
+    // Fetch API configuration from Grist
+    async function fetchApiConfig() {
+      try {
+        const configTable = await grist.docApi.fetchTable('ApiConfig');
+        const config = {};
+        configTable[2].forEach((key, index) => {
+          config[key] = configTable[3][index];
+        });
+        return config;
+      } catch (err) {
+        console.error('Failed to fetch API config:', err);
+        throw new Error('Could not load API configuration from Grist');
+      }
+    }
+
+    // Send email via Mailgun
+    async function sendEmail() {
+      if (!data.emailForm.to || !data.emailForm.subject || !data.emailForm.body) {
+        alert('Please fill in all fields');
+        return;
+      }
+
+      const invoicer = data.invoice.Invoicer;
+      if (!invoicer || !invoicer.Email) {
+        alert('Invoicer email not found');
+        return;
+      }
+
+      try {
+        data.sendingEmail = true;
+        data.emailStatus = 'Loading configuration...';
+
+        // Fetch API key from Grist
+        const config = await fetchApiConfig();
+        const apiKey = config.mailgun_api_key;
+        const domain = config.mailgun_domain || 'mg.stroikos.com';
+
+        if (!apiKey) {
+          throw new Error('Mailgun API key not configured in Grist');
+        }
+
+        data.emailStatus = 'Sending email...';
+
+        const formData = new FormData();
+        formData.append('from', `${invoicer.Name || 'Stroikos Services'} <${invoicer.Email}>`);
+        formData.append('to', data.emailForm.to);
+        formData.append('subject', data.emailForm.subject);
+        formData.append('text', data.emailForm.body);
+
+        const response = await fetch(`https://api.mailgun.net/v3/${domain}/messages`, {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Basic ' + btoa('api:' + apiKey)
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to send email: ${response.status} ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log('Email sent:', result);
+
+        data.emailStatus = 'Email sent successfully!';
+        setTimeout(() => {
+          closeEmailModal();
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to send email:', err);
+        data.emailStatus = 'Failed to send email: ' + err.message;
+      } finally {
+        data.sendingEmail = false;
+      }
     }
 
     // ===== END WORKFLOW FUNCTIONS =====
@@ -2838,6 +3013,15 @@
           },
           copyLink: function(link) {
             copyLink(link);
+          },
+          openEmailModal: function() {
+            openEmailModal();
+          },
+          closeEmailModal: function() {
+            closeEmailModal();
+          },
+          sendEmail: function() {
+            sendEmail();
           }
         },
         watch: {
@@ -2993,6 +3177,10 @@
                         @click="copyLink(currentPublicLink)">
                   {{ linkCopied ? 'Copied!' : 'Copy' }}
                 </button>
+                <button class="workflow-email-btn"
+                        @click="openEmailModal">
+                  Email
+                </button>
               </div>
             </template>
 
@@ -3017,6 +3205,10 @@
                 <button :class="['workflow-copy-btn', { copied: linkCopied }]"
                         @click="copyLink(currentPublicLink)">
                   {{ linkCopied ? 'Copied!' : 'Copy' }}
+                </button>
+                <button class="workflow-email-btn"
+                        @click="openEmailModal">
+                  Email
                 </button>
               </div>
             </template>
@@ -3562,6 +3754,43 @@
           <div class="modal-footer">
             <button class="modal-cancel" @click="closeTreeModal">Cancel</button>
             <button class="modal-submit" @click="submitNewTree">{{ editingTreeId ? 'Update Tree Item' : 'Add Tree Item' }}</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Email Modal -->
+      <div v-if="showEmailModal" class="modal-overlay" @click.self="closeEmailModal">
+        <div class="modal-content" style="max-width: 700px;">
+          <div class="modal-header">
+            <div class="modal-title">Send {{ invoice.Status === 2 ? 'Quote' : 'Invoice' }} via Email</div>
+            <button class="modal-close" @click="closeEmailModal">Close</button>
+          </div>
+
+          <div class="modal-section">
+            <div class="modal-field">
+              <label>To:</label>
+              <input type="email" v-model="emailForm.to" placeholder="recipient@example.com">
+            </div>
+
+            <div class="modal-field">
+              <label>Subject:</label>
+              <input type="text" v-model="emailForm.subject" placeholder="Email subject">
+            </div>
+
+            <div class="modal-field">
+              <label>Message:</label>
+              <textarea v-model="emailForm.body" rows="15" placeholder="Email body"></textarea>
+            </div>
+          </div>
+
+          <div v-if="emailStatus" style="padding: 0.5em 1em; margin: 1em; background: #e8f4f8; border-radius: 4px; color: #333;">
+            {{ emailStatus }}
+          </div>
+
+          <div style="padding: 1em; text-align: right;">
+            <button class="modal-submit" @click="sendEmail" :disabled="sendingEmail">
+              {{ sendingEmail ? 'Sending...' : 'Send Email' }}
+            </button>
           </div>
         </div>
       </div>

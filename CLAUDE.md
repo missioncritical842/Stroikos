@@ -22,6 +22,15 @@
 - After committing, provide updated GitHub Pages URLs with new version as cache-busting parameter: `?v1.X`
 - Push to origin after commit
 
+## Mailgun API Configuration
+The Mailgun API credentials are stored securely in the Grist document in the `ApiConfig` table:
+- **Table**: `ApiConfig` (access-controlled)
+- **Records**:
+  - `mailgun_api_key`: The Mailgun API key
+  - `mailgun_domain`: The Mailgun domain (mg.stroikos.com)
+- **Widget Access**: The tree-invoice-alt widget fetches these credentials dynamically from Grist
+- **Security**: Control access to the ApiConfig table to restrict who can view/edit the API key
+
 ## Grist MCP Integration - CRITICAL
 When working with Grist data:
 1. **Always use Grist MCP tools** (`list_tables`, `list_columns`, `list_records`) to verify actual table and column names
